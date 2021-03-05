@@ -17,7 +17,7 @@ commands.add({name: 'ping'}, (message) => {
 
 commands.add({name: 'watching'}, async (message, username) => {
     const query = `
-    query ($username: String) {
+    query ($username: String ) {
         Page (page: 1, perPage: 10) {
             pageInfo {
                 total
@@ -30,6 +30,7 @@ commands.add({name: 'watching'}, async (message, username) => {
                 userName: $username,
                 type: ANIME,
                 status: CURRENT
+                sort: [UPDATED_TIME_DESC]
             ) {
                 user {
                     name
@@ -44,6 +45,8 @@ commands.add({name: 'watching'}, async (message, username) => {
                     id
                     title {
                         english
+                        romaji
+                        native
                     }
                     episodes
                 }
@@ -76,9 +79,14 @@ commands.add({name: 'watching'}, async (message, username) => {
             profileColor : colors[profileColor];
 
         const fields = mediaList.map((media, i) => {
+            const url = `https://anilist.co/anime/${media.id}/`;
+            const count = `${results[i].progress} / ${media.episodes || '?'}`;
+            const title = media.title.english
+                || media.title.romaji 
+                || media.title.native
             return {
-                name: media.title.english,
-                value: `${results[i].progress} / ${media.episodes || '?'}`
+                name: title,
+                value: `${count.padEnd(15, ' ')}[Link](${url})`
             }
         });
 
