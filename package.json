@@ -1,0 +1,30 @@
+{
+  "name": "discord-bot",
+  "version": "0.0.0",
+  "description": "",
+  "main": "bot.js",
+  "scripts": {
+    "start": "node bot.js",
+    "lint": "./node_modules/.bin/eslint .",
+    "lint-fix": "./node_modules/.bin/eslint . --fix",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DamourYouKnow/damour-bot.git"
+  },
+  "author": "DamourYouKnow",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/DamourYouKnow/discord-bot-template/issues"
+  },
+  "homepage": "https://github.com/DamourYouKnow/damour-bot-template#readme",
+  "dependencies": {
+    "discord.js": "^12.5.1",
+    "js-yaml": "^4.0.0"
+  },
+  "devDependencies": {
+    "eslint": "^5.7.0",
+    "eslint-config-google": "^0.11.0"
+  }
+}

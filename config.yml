@@ -1,0 +1,6 @@
+# Authentication token for the bot application:
+# REMEMBER: DON'T CHECK IN YOUR API TOKEN INTO PUBLIC SOURCE CONTROL!
+token: null
+
+# Command prefix
+commandPrefix: "!"
