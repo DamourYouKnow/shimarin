@@ -39,6 +39,7 @@ export module Helpers {
                     .apply(null, [message, ...args]);
             } catch (err) {
                 console.error(err);
+                message.channel.send(err.message || 'An error ocurred.');
             }
         }
     }

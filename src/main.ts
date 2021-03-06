@@ -17,6 +17,7 @@ commands.add({name: 'ping'}, (message) => {
 });
 
 interface AniListUser {
+    id: number,
     name: string,
     options: {
         profileColor: string
@@ -26,7 +27,6 @@ interface AniListUser {
     }
 }
 interface MediaList {
-    user: AniListUser,
     type: MediaListType,
     status: MediaListStatus
     entries: MediaListItem[]
@@ -124,29 +124,39 @@ class EmbedNavigator {
 }
 
 commands.add({name: 'watching'}, async (message, username) => {
-    const mediaList = await getMediaListPage(username, 'ANIME', 'CURRENT');
-    const response = await message.channel.send(mediaListEmbed(mediaList));
+    const user = await searchUser(username);
+    const mediaList = await getMediaListPage(user.id, 'ANIME', 'CURRENT');
+    const response = await message.channel.send(
+        mediaListEmbed(user, mediaList)
+    );
     new EmbedNavigator(
         response,
         message.author,
         mediaList.pageInfo,
         async (page) => {
             return mediaListEmbed(
-                await getMediaListPage(username, 'ANIME', 'CURRENT', page))
+                user,
+                await getMediaListPage(user.id, 'ANIME', 'CURRENT', page)
+            );
         }
     ).listen();
 });
 
 commands.add({name: 'reading'}, async (message, username) => {
-    const mediaList = await getMediaListPage(username, 'MANGA', 'CURRENT');
-    const response = await message.channel.send(mediaListEmbed(mediaList));
+    const user = await searchUser(username);
+    const mediaList = await getMediaListPage(user.id, 'MANGA', 'CURRENT');
+    const response = await message.channel.send(
+        mediaListEmbed(user, mediaList)
+    );
     new EmbedNavigator(
         response,
         message.author,
         mediaList.pageInfo,
         async (page) => {
             return mediaListEmbed(
-                await getMediaListPage(username, 'MANGA', 'CURRENT', page))
+                user,
+                await getMediaListPage(user.id, 'MANGA', 'CURRENT', page)
+            );
         }
     ).listen();
 });
@@ -162,86 +172,99 @@ commands.add({name: 'list'}, async (message, username, ...args) => {
     if (argSet.has('dropped')) status = 'DROPPED';
     if (argSet.has('planned')) status = 'PLANNING';
 
-    const mediaList = await getMediaListPage(username, type, status, 0);
-    const response = await message.channel.send(mediaListEmbed(mediaList));
+    const user = await searchUser(username);
+    const mediaList = await getMediaListPage(user.id, type, status, 0);
+    const response = await message.channel.send(
+        mediaListEmbed(user, mediaList)
+    );
     new EmbedNavigator(
         response,
         message.author,
         mediaList.pageInfo,
         async (page) => {
             return mediaListEmbed(
-                await getMediaListPage(username, type, status, page))
+                user,
+                await getMediaListPage(user.id, type, status, page)
+            )
         }
     ).listen();
 });
 
+async function searchUser(username: string): Promise<AniListUser | null> {
+    if (!username) return null;
+    const response = await http.post('https://graphql.anilist.co', {
+        query: `query ($username: String) {    
+            User(name: $username) {
+                id
+                name
+                options {
+                    profileColor
+                }
+                avatar {
+                    medium
+                }
+            }
+        }`,
+        variables: {
+            username: username
+        }
+    });
+    const results = response.data.data.User as AniListUser;
+    return results;
+}
+
 async function getMediaListPage(
-    username: string,
+    userId: number,
     type: MediaListType,
     status: MediaListStatus,
     page: number = 0
 ): Promise<MediaListPage> {
-    const query = `
-    query (
-        $username: String,
-        $type: MediaType,
-        $status: MediaListStatus,
-        $page: Int,
-        $perPage: Int
-    ) {
-        Page (page: $page, perPage: $perPage) {
-            pageInfo {
-                total
-                currentPage
-                lastPage
-                hasNextPage
-                perPage
-            }
-            mediaList (
-                userName: $username,
-                type: $type,
-                status: $status
-                sort: [UPDATED_TIME_DESC]
-            ) {
-                user {
-                    name
-                    options {
-                        profileColor
-                    }
-                    avatar {
-                        medium
-                    }
-                }
-                media {
-                    id
-                    title {
-                        english
-                        romaji
-                        native
-                    }
-                    episodes
-                    chapters
-                }
-                progress
-            }
-        }
-    }
-    `; 
     const response = await http.post('https://graphql.anilist.co', {
-        query: query,
+        query: `query (
+            $userId: Int,
+            $type: MediaType,
+            $status: MediaListStatus,
+            $page: Int,
+            $perPage: Int
+        ) {
+            Page (page: $page, perPage: $perPage) {
+                pageInfo {
+                    total
+                    currentPage
+                    lastPage
+                    hasNextPage
+                    perPage
+                }
+                mediaList (
+                    userId: $userId,
+                    type: $type,
+                    status: $status
+                    sort: [UPDATED_TIME_DESC]
+                ) {
+                    media {
+                        id
+                        title {
+                            english
+                            romaji
+                            native
+                        }
+                        episodes
+                        chapters
+                    }
+                    progress
+                }
+            }
+        }`,
         variables: {
-            username: username,
+            userId: userId,
             type: type,
             status: status,
             page: page,
             perPage: 10
         }
-    });
+    }, {timeout: 1000});
     const results = response.data.data.Page.mediaList;
-    // FIXME: user will not be returned if media list is empty.
-    const user = results[0]?.user;
     return {
-        user: user as AniListUser,
         entries: results as MediaListItem[],
         type: type,
         status: status,
@@ -250,6 +273,7 @@ async function getMediaListPage(
 }
 
 function mediaListEmbed(
+    user: AniListUser,
     mediaList: MediaListPage
 ): Discord.MessageEmbed {
     const colors: {[color: string]: string}  = {
@@ -262,8 +286,7 @@ function mediaListEmbed(
         'gray': '#677b94'
     };
 
-    const user = mediaList.user;
-    const profileColor = mediaList.user.options.profileColor || '#dec027';
+    const profileColor = user.options.profileColor || '#dec027';
     const embedColor = profileColor.startsWith('#') ?
         profileColor : colors[profileColor];
 
@@ -319,6 +342,12 @@ function mediaListEmbed(
         footer: {
             text: `Page ${currentPage} / ${lastPage}`
         }
+    });
+}
+
+async function sleep(time: number) {
+    return new Promise((resolve, _) => {
+        setTimeout(resolve, time);
     });
 }
 
