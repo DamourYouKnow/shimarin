@@ -305,6 +305,9 @@ function mediaListEmbed(
         }
     };
 
+    const currentPage = mediaList.pageInfo.currentPage;
+    const lastPage = mediaList.pageInfo.lastPage;
+
     return new Discord.MessageEmbed({
         color: embedColor,
         title: `${user.name}'s ${listLabels[mediaList.type][mediaList.status]}`,
@@ -312,7 +315,10 @@ function mediaListEmbed(
         thumbnail: {
             url: user.avatar.medium,
         },
-        fields: fields
+        fields: fields,
+        footer: {
+            text: `Page ${currentPage} / ${lastPage}`
+        }
     });
 }
 
