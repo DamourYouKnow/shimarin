@@ -1,79 +1,16 @@
 import * as Discord from 'discord.js';
 import * as AniList from './anilist';
-import { Helpers } from './helpers';
+import * as Bot from './bot';
 
 
-const client = new Discord.Client();
+const bot = new Bot.Bot(new Discord.Client());
+bot.login();
 
-client.on('ready', () => {
-    console.log(`Logged in as ${client.user.tag}`);
-});
-
-const commands = new Helpers.Commands();
-
-// Add your commands here...
-commands.add({name: 'ping'}, (message) => {
+bot.commands.add({name: 'ping'}, (message) => {
     message.channel.send('pong!');
 });
 
-class EmbedNavigator {
-    message: Discord.Message;
-    navigatingUser: Discord.User;
-    pageInfo: AniList.PageInfo;
-    generatePage: (page: number) => Promise<Discord.MessageEmbed>;
-
-    constructor(
-        message: Discord.Message,
-        navigatingUser: Discord.User,
-        pageInfo: AniList.PageInfo,
-        generatePage: (page: number) => Promise<Discord.MessageEmbed>
-    ) {
-        this.message = message;
-        this.navigatingUser = navigatingUser;
-        this.pageInfo = pageInfo;
-        this.generatePage = generatePage;
-    }
-
-    async listen() {
-        const previousBtn = await this.message.react('⬅️');
-        const nextBtn = await this.message.react('➡️');
-        const filter: Discord.CollectorFilter = () => true;
-        const collector = this.message.createReactionCollector(filter, {
-            dispose: true
-        });
-
-        const navigatingUser = this.navigatingUser;
-        const handleReaction = (
-            reaction: Discord.MessageReaction,
-            user: Discord.User
-        ) => {
-            if (user != navigatingUser) return;
-            if (reaction == nextBtn) this.next();
-            if (reaction == previousBtn) this.previous();
-        };
-
-        collector.on('collect', handleReaction);
-        collector.on('remove', handleReaction);
-    }
-
-    async next() {
-        if (this.pageInfo.currentPage < this.pageInfo.lastPage) {
-            this.pageInfo.currentPage += 1;
-            const embed = await this.generatePage(this.pageInfo.currentPage);
-            await this.message.edit(embed);
-        }
-    }
-
-    async previous() {
-        if (this.pageInfo.currentPage > 0) {
-            this.pageInfo.currentPage -= 1;
-            const embed = await this.generatePage(this.pageInfo.currentPage);
-            await this.message.edit(embed);
-        }
-    }
-}
-
-commands.add({name: 'watching'}, async (message, username) => {
+bot.commands.add({name: 'watching'}, async (message, username) => {
     const user = await AniList.searchUser(username);
     const mediaList = await AniList.getMediaListPage(
         user.id,
@@ -83,7 +20,7 @@ commands.add({name: 'watching'}, async (message, username) => {
     const response = await message.channel.send(
         mediaListEmbed(user, mediaList)
     );
-    new EmbedNavigator(
+    new Bot.EmbedNavigator(
         response,
         message.author,
         mediaList.pageInfo,
@@ -101,7 +38,7 @@ commands.add({name: 'watching'}, async (message, username) => {
     ).listen();
 });
 
-commands.add({name: 'reading'}, async (message, username) => {
+bot.commands.add({name: 'reading'}, async (message, username) => {
     const user = await AniList.searchUser(username);
     const mediaList = await AniList.getMediaListPage(
         user.id,
@@ -111,7 +48,7 @@ commands.add({name: 'reading'}, async (message, username) => {
     const response = await message.channel.send(
         mediaListEmbed(user, mediaList)
     );
-    new EmbedNavigator(
+    new Bot.EmbedNavigator(
         response,
         message.author,
         mediaList.pageInfo,
@@ -129,7 +66,7 @@ commands.add({name: 'reading'}, async (message, username) => {
     ).listen();
 });
 
-commands.add({name: 'list'}, async (message, username, ...args) => {
+bot.commands.add({name: 'list'}, async (message, username, ...args) => {
     const argSet = new Set(args);
     
     let type: AniList.MediaListType = 'ANIME';
@@ -145,7 +82,7 @@ commands.add({name: 'list'}, async (message, username, ...args) => {
     const response = await message.channel.send(
         mediaListEmbed(user, mediaList)
     );
-    new EmbedNavigator(
+    new Bot.EmbedNavigator(
         response,
         message.author,
         mediaList.pageInfo,
@@ -232,16 +169,3 @@ function mediaListEmbed(
         }
     });
 }
-
-async function sleep(time: number) {
-    return new Promise((resolve, _) => {
-        setTimeout(resolve, time);
-    });
-}
-
-// Pass messages to message handler.
-client.on('message', (message) => {
-    Helpers.messageHandler(commands, message);
-});
-
-Helpers.login(client);
