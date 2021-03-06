@@ -43,7 +43,9 @@ export module Helpers {
                 config.commandPrefix.length
             ).split(' ')[0];
             if (commands.exists(command)) {
-                const args = message.content.split(' ').slice(1);
+                const args = message.content.split(' ').slice(1).map((arg) => {
+                    return arg.toLowerCase();
+                });
                 commands.execute(command, message, args);
             }
         }
