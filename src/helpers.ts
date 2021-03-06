@@ -32,8 +32,14 @@ export module Helpers {
             return this.commands.has(command);
         }
 
-        execute(command: string, message: Message, args: string[] = []) {
-            this.commands.get(command).apply(null, [message, ...args]);
+        async execute(command: string, message: Message, args: string[] = []) {
+            try {
+                await this.commands
+                    .get(command)
+                    .apply(null, [message, ...args]);
+            } catch (err) {
+                console.error(err);
+            }
         }
     }
 
