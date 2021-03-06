@@ -1,5 +1,5 @@
 import * as Discord from 'discord.js';
-import http from 'axios';
+import * as AniList from './anilist';
 import { Helpers } from './helpers';
 
 
@@ -16,66 +16,16 @@ commands.add({name: 'ping'}, (message) => {
     message.channel.send('pong!');
 });
 
-interface AniListUser {
-    id: number,
-    name: string,
-    options: {
-        profileColor: string
-    },
-    avatar: {
-        medium: string
-    }
-}
-interface MediaList {
-    type: MediaListType,
-    status: MediaListStatus
-    entries: MediaListItem[]
-}
-
-interface MediaListPage extends MediaList {
-    pageInfo: PageInfo
-}
-
-interface MediaListItem {
-    media: Media,
-    progress: number | null;
-}
-
-interface Media {
-    id: number,
-    title: {
-        english: string | null,
-        romaji: string | null,
-        native: string | null
-    },
-    chapters: number | null
-    episodes: number | null
-}
-
-interface PageInfo {
-    total: number,
-    perPage: number,
-    currentPage: number,
-    lastPage: number,
-    hasNextPage: number
-}
-
-type MediaListType = 'ANIME' | 'MANGA';
-
-type MediaListStatus = 'CURRENT' | 'PLANNING' | 'COMPLETED' | 'DROPPED'
-    | 'PAUSED' | 'REPEATING';
-
-
 class EmbedNavigator {
     message: Discord.Message;
     navigatingUser: Discord.User;
-    pageInfo: PageInfo;
+    pageInfo: AniList.PageInfo;
     generatePage: (page: number) => Promise<Discord.MessageEmbed>;
 
     constructor(
         message: Discord.Message,
         navigatingUser: Discord.User,
-        pageInfo: PageInfo,
+        pageInfo: AniList.PageInfo,
         generatePage: (page: number) => Promise<Discord.MessageEmbed>
     ) {
         this.message = message;
@@ -124,8 +74,12 @@ class EmbedNavigator {
 }
 
 commands.add({name: 'watching'}, async (message, username) => {
-    const user = await searchUser(username);
-    const mediaList = await getMediaListPage(user.id, 'ANIME', 'CURRENT');
+    const user = await AniList.searchUser(username);
+    const mediaList = await AniList.getMediaListPage(
+        user.id,
+        'ANIME',
+        'CURRENT'
+    );
     const response = await message.channel.send(
         mediaListEmbed(user, mediaList)
     );
@@ -136,15 +90,24 @@ commands.add({name: 'watching'}, async (message, username) => {
         async (page) => {
             return mediaListEmbed(
                 user,
-                await getMediaListPage(user.id, 'ANIME', 'CURRENT', page)
+                await AniList.getMediaListPage(
+                    user.id,
+                    'ANIME',
+                    'CURRENT',
+                    page
+                )
             );
         }
     ).listen();
 });
 
 commands.add({name: 'reading'}, async (message, username) => {
-    const user = await searchUser(username);
-    const mediaList = await getMediaListPage(user.id, 'MANGA', 'CURRENT');
+    const user = await AniList.searchUser(username);
+    const mediaList = await AniList.getMediaListPage(
+        user.id,
+        'MANGA',
+        'CURRENT'
+    );
     const response = await message.channel.send(
         mediaListEmbed(user, mediaList)
     );
@@ -155,7 +118,12 @@ commands.add({name: 'reading'}, async (message, username) => {
         async (page) => {
             return mediaListEmbed(
                 user,
-                await getMediaListPage(user.id, 'MANGA', 'CURRENT', page)
+                await AniList.getMediaListPage(
+                    user.id,
+                    'MANGA',
+                    'CURRENT',
+                    page
+                )
             );
         }
     ).listen();
@@ -164,16 +132,16 @@ commands.add({name: 'reading'}, async (message, username) => {
 commands.add({name: 'list'}, async (message, username, ...args) => {
     const argSet = new Set(args);
     
-    let type: MediaListType = 'ANIME';
+    let type: AniList.MediaListType = 'ANIME';
     if (argSet.has('manga')) type = 'MANGA';
 
-    let status: MediaListStatus = 'COMPLETED';
+    let status: AniList.MediaListStatus = 'COMPLETED';
     if (argSet.has('watching')) status = 'CURRENT';
     if (argSet.has('dropped')) status = 'DROPPED';
     if (argSet.has('planned')) status = 'PLANNING';
 
-    const user = await searchUser(username);
-    const mediaList = await getMediaListPage(user.id, type, status, 0);
+    const user = await AniList.searchUser(username);
+    const mediaList = await AniList.getMediaListPage(user.id, type, status, 0);
     const response = await message.channel.send(
         mediaListEmbed(user, mediaList)
     );
@@ -184,97 +152,15 @@ commands.add({name: 'list'}, async (message, username, ...args) => {
         async (page) => {
             return mediaListEmbed(
                 user,
-                await getMediaListPage(user.id, type, status, page)
+                await AniList.getMediaListPage(user.id, type, status, page)
             )
         }
     ).listen();
 });
 
-async function searchUser(username: string): Promise<AniListUser | null> {
-    if (!username) return null;
-    const response = await http.post('https://graphql.anilist.co', {
-        query: `query ($username: String) {    
-            User(name: $username) {
-                id
-                name
-                options {
-                    profileColor
-                }
-                avatar {
-                    medium
-                }
-            }
-        }`,
-        variables: {
-            username: username
-        }
-    });
-    const results = response.data.data.User as AniListUser;
-    return results;
-}
-
-async function getMediaListPage(
-    userId: number,
-    type: MediaListType,
-    status: MediaListStatus,
-    page: number = 0
-): Promise<MediaListPage> {
-    const response = await http.post('https://graphql.anilist.co', {
-        query: `query (
-            $userId: Int,
-            $type: MediaType,
-            $status: MediaListStatus,
-            $page: Int,
-            $perPage: Int
-        ) {
-            Page (page: $page, perPage: $perPage) {
-                pageInfo {
-                    total
-                    currentPage
-                    lastPage
-                    hasNextPage
-                    perPage
-                }
-                mediaList (
-                    userId: $userId,
-                    type: $type,
-                    status: $status
-                    sort: [UPDATED_TIME_DESC]
-                ) {
-                    media {
-                        id
-                        title {
-                            english
-                            romaji
-                            native
-                        }
-                        episodes
-                        chapters
-                    }
-                    progress
-                }
-            }
-        }`,
-        variables: {
-            userId: userId,
-            type: type,
-            status: status,
-            page: page,
-            perPage: 10
-        }
-    }, {timeout: 1000});
-    const results = response.data.data.Page.mediaList;
-    return {
-        entries: results as MediaListItem[],
-        type: type,
-        status: status,
-        pageInfo: response.data.data.Page.pageInfo as PageInfo
-    }
-}
-
 function mediaListEmbed(
-    user: AniListUser,
-    mediaList: MediaListPage
+    user: AniList.User,
+    mediaList: AniList.MediaListPage
 ): Discord.MessageEmbed {
     const colors: {[color: string]: string}  = {
         'blue': '#3db4f2',
@@ -308,7 +194,9 @@ function mediaListEmbed(
     });
 
     const listLabels: {
-        [type in MediaListType]: {[status in MediaListStatus]: string}
+        [type in AniList.MediaListType]: {
+            [status in AniList.MediaListStatus]: string
+        }
     } = {
         'ANIME': {
             'COMPLETED': 'completed anime list',
