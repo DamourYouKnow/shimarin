@@ -16,6 +16,36 @@ commands.add({name: 'ping'}, (message) => {
     message.channel.send('pong!');
 });
 
+interface AniListUser {
+    name: string,
+    options: {
+        profileColor: string
+    },
+    avatar: {
+        medium: string
+    }
+}
+interface MediaList {
+    user: AniListUser,
+    type: 'ANIME' | 'MANGA',
+    entries: MediaListItem[]
+}
+
+interface MediaListItem {
+    media: Media,
+    progress: number | null;
+}
+
+interface Media {
+    id: number,
+    title: {
+        english: string | null,
+        romaji: string | null,
+        native: string | null
+    },
+    episodes: number | null
+}
+
 commands.add({name: 'watching'}, async (message, username) => {
     const query = `
     query ($username: String ) {
@@ -63,48 +93,60 @@ commands.add({name: 'watching'}, async (message, username) => {
             { query: query, variables: variables }
         );
         const results = response.data.data.Page.mediaList;
-        const mediaList = results.map((item) => item.media);
+        // FIXME: user will not be returned if media list is empty.
         const user = results[0]?.user;
-
-        const colors = {
-            'blue': '#3db4f2',
-            'purple': '#c063ff', 
-            'pink': '#fc9dd6',
-            'orange': '#ef881a',
-            'red': '#e13333', 
-            'green': '#4cca51',
-            'gray': '#677b94'
-        }
-        const profileColor = user?.options.profileColor || '#dec027';
-        const embedColor = profileColor.startsWith('#') ?
-            profileColor : colors[profileColor];
-
-        const fields = mediaList.map((media, i) => {
-            const url = `https://anilist.co/anime/${media.id}/`;
-            const count = `${results[i].progress} / ${media.episodes || '?'}`;
-            const title = media.title.english
-                || media.title.romaji 
-                || media.title.native
-            return {
-                name: title,
-                value: `${count.padEnd(15, ' ')}[Link](${url})`
-            }
-        });
-
-        const embed = new Discord.MessageEmbed({
-            color: embedColor,
-            title: `${user.name}'s watchlist`,
-            url: `https://anilist.co/user/${user.name}/animelist/Watching`,
-            thumbnail: {
-                url: user.avatar.medium,
-            },
-            fields: fields
-        });
-        message.channel.send(embed);
+        const mediaList: MediaList = {
+            user: user as AniListUser,
+            entries: results as MediaListItem[],
+            type: 'ANIME'
+        };
+        message.channel.send(mediaListEmbed(mediaList));
     } catch (err) {
         console.error(err);
     }
 });
+
+function mediaListEmbed(
+    mediaList: MediaList
+): Discord.MessageEmbed {
+    const colors: {[color: string]: string}  = {
+        'blue': '#3db4f2',
+        'purple': '#c063ff', 
+        'pink': '#fc9dd6',
+        'orange': '#ef881a',
+        'red': '#e13333', 
+        'green': '#4cca51',
+        'gray': '#677b94'
+    }
+
+    const user = mediaList.user;
+    const profileColor = mediaList.user.options.profileColor || '#dec027';
+    const embedColor = profileColor.startsWith('#') ?
+        profileColor : colors[profileColor];
+
+    const fields = mediaList.entries.map((entry) => {
+        const media = entry.media;
+        const url = `https://anilist.co/anime/${entry.media.id}/`;
+        const count = `${entry.progress} / ${entry.media.episodes || '?'}`;
+        const title = media.title.english
+            || media.title.romaji 
+            || media.title.native
+        return {
+            name: title,
+            value: `${count.padEnd(15, ' ')}[Link](${url})`
+        }
+    });
+
+    return new Discord.MessageEmbed({
+        color: embedColor,
+        title: `${user.name}'s watchlist`,
+        url: `https://anilist.co/user/${user.name}/animelist/Watching`,
+        thumbnail: {
+            url: user.avatar.medium,
+        },
+        fields: fields
+    });
+}
 
 // Pass messages to message handler.
 client.on('message', (message) => {
