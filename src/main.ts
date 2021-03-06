@@ -163,7 +163,8 @@ function mediaListEmbed(
 
     const fields = mediaList.entries.map((entry) => {
         const media = entry.media;
-        const url = `https://anilist.co/anime/${entry.media.id}/`;
+        const resource = `${mediaList.type.toLowerCase()}/${entry.media.id}/`;
+        const url = `https://anilist.co/${resource}`;
         const maxCount = { 
             'ANIME': media.episodes, 'MANGA': media.chapters
         }[mediaList.type];
