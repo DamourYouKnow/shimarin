@@ -32,6 +32,10 @@ interface MediaList {
     entries: MediaListItem[]
 }
 
+interface MediaListPage extends MediaList {
+    pageInfo: PageInfo
+}
+
 interface MediaListItem {
     media: Media,
     progress: number | null;
@@ -48,19 +52,103 @@ interface Media {
     episodes: number | null
 }
 
+interface PageInfo {
+    total: number,
+    perPage: number,
+    currentPage: number,
+    lastPage: number,
+    hasNextPage: number
+}
+
 type MediaListType = 'ANIME' | 'MANGA';
 
 type MediaListStatus = 'CURRENT' | 'PLANNING' | 'COMPLETED' | 'DROPPED'
     | 'PAUSED' | 'REPEATING';
 
+
+class EmbedNavigator {
+    message: Discord.Message;
+    navigatingUser: Discord.User;
+    pageInfo: PageInfo;
+    generatePage: (page: number) => Promise<Discord.MessageEmbed>;
+
+    constructor(
+        message: Discord.Message,
+        navigatingUser: Discord.User,
+        pageInfo: PageInfo,
+        generatePage: (page: number) => Promise<Discord.MessageEmbed>
+    ) {
+        this.message = message;
+        this.navigatingUser = navigatingUser;
+        this.pageInfo = pageInfo;
+        this.generatePage = generatePage;
+    }
+
+    async listen() {
+        const previousBtn = await this.message.react('⬅️');
+        const nextBtn = await this.message.react('➡️');
+        const filter: Discord.CollectorFilter = () => true;
+        const collector = this.message.createReactionCollector(filter, {
+            dispose: true
+        });
+
+        const navigatingUser = this.navigatingUser;
+        const handleReaction = (
+            reaction: Discord.MessageReaction,
+            user: Discord.User
+        ) => {
+            if (user != navigatingUser) return;
+            if (reaction == nextBtn) this.next();
+            if (reaction == previousBtn) this.previous();
+        };
+
+        collector.on('collect', handleReaction);
+        collector.on('remove', handleReaction);
+    }
+
+    async next() {
+        if (this.pageInfo.currentPage < this.pageInfo.lastPage) {
+            this.pageInfo.currentPage += 1;
+            const embed = await this.generatePage(this.pageInfo.currentPage);
+            await this.message.edit(embed);
+        }
+    }
+
+    async previous() {
+        if (this.pageInfo.currentPage > 0) {
+            this.pageInfo.currentPage -= 1;
+            const embed = await this.generatePage(this.pageInfo.currentPage);
+            await this.message.edit(embed);
+        }
+    }
+}
+
 commands.add({name: 'watching'}, async (message, username) => {
-    const mediaList = await getMediaList(username, 'ANIME', 'CURRENT');
-    message.channel.send(mediaListEmbed(mediaList));
+    const mediaList = await getMediaListPage(username, 'ANIME', 'CURRENT');
+    const response = await message.channel.send(mediaListEmbed(mediaList));
+    new EmbedNavigator(
+        response,
+        message.author,
+        mediaList.pageInfo,
+        async (page) => {
+            return mediaListEmbed(
+                await getMediaListPage(username, 'ANIME', 'CURRENT', page))
+        }
+    ).listen();
 });
 
 commands.add({name: 'reading'}, async (message, username) => {
-    const mediaList = await getMediaList(username, 'MANGA', 'CURRENT');
-    message.channel.send(mediaListEmbed(mediaList));
+    const mediaList = await getMediaListPage(username, 'MANGA', 'CURRENT');
+    const response = await message.channel.send(mediaListEmbed(mediaList));
+    new EmbedNavigator(
+        response,
+        message.author,
+        mediaList.pageInfo,
+        async (page) => {
+            return mediaListEmbed(
+                await getMediaListPage(username, 'MANGA', 'CURRENT', page))
+        }
+    ).listen();
 });
 
 commands.add({name: 'list'}, async (message, username, ...args) => {
@@ -74,18 +162,34 @@ commands.add({name: 'list'}, async (message, username, ...args) => {
     if (argSet.has('dropped')) status = 'DROPPED';
     if (argSet.has('planned')) status = 'PLANNING';
 
-    const mediaList = await getMediaList(username, type, status);
-    message.channel.send(mediaListEmbed(mediaList));
+    const mediaList = await getMediaListPage(username, type, status, 0);
+    const response = await message.channel.send(mediaListEmbed(mediaList));
+    new EmbedNavigator(
+        response,
+        message.author,
+        mediaList.pageInfo,
+        async (page) => {
+            return mediaListEmbed(
+                await getMediaListPage(username, type, status, page))
+        }
+    ).listen();
 });
 
-async function getMediaList(
+async function getMediaListPage(
     username: string,
     type: MediaListType,
-    status: MediaListStatus
-): Promise<MediaList> {
+    status: MediaListStatus,
+    page: number = 0
+): Promise<MediaListPage> {
     const query = `
-    query ($username: String, $type: MediaType, $status: MediaListStatus) {
-        Page (page: 1, perPage: 10) {
+    query (
+        $username: String,
+        $type: MediaType,
+        $status: MediaListStatus,
+        $page: Int,
+        $perPage: Int
+    ) {
+        Page (page: $page, perPage: $perPage) {
             pageInfo {
                 total
                 currentPage
@@ -128,7 +232,9 @@ async function getMediaList(
         variables: {
             username: username,
             type: type,
-            status: status
+            status: status,
+            page: page,
+            perPage: 10
         }
     });
     const results = response.data.data.Page.mediaList;
@@ -138,12 +244,13 @@ async function getMediaList(
         user: user as AniListUser,
         entries: results as MediaListItem[],
         type: type,
-        status: status
+        status: status,
+        pageInfo: response.data.data.Page.pageInfo as PageInfo
     }
 }
 
 function mediaListEmbed(
-    mediaList: MediaList
+    mediaList: MediaListPage
 ): Discord.MessageEmbed {
     const colors: {[color: string]: string}  = {
         'blue': '#3db4f2',
