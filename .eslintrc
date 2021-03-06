@@ -1,25 +1,21 @@
 {
-    "env": {
-        "es6": true,
-        "node": true
-    },
-    "extends": ["eslint:recommended", "google"],
-    "parserOptions": {
-        "ecmaVersion": 2018,
-        "sourceType": "module"
-    },
+    "parser": "@typescript-eslint/parser",
+    "plugins": ["@typescript-eslint"],
+    "extends": [
+        "eslint:recommended",
+        "plugin:@typescript-eslint/eslint-recommended",
+        "plugin:@typescript-eslint/recommended"
+    ],
     "rules": {
-        "indent": ["error", 4],
-        "linebreak-style": "off",
-        "no-console": "off",
-        "semi": [
-            "error",
-            "always"
-        ],
-        "curly": 0,
-        "comma-dangle": 0,
-        "max-len": 2,
-        "require-jsdoc": 0,
-        "no-invalid-this": 1
+        "@typescript-eslint/no-use-before-define": "off",
+        "@typescript-eslint/no-explicit-any": "off",
+        "@typescript-eslint/explicit-function-return-type": "off",
+        "@typescript-eslint/no-namespace": "off",
+        "no-inner-declarations": "off",
+        "semi": "error",
+        "max-len": [
+            "error", 
+            {"code": 80 }
+        ]
     }
-} 
+}

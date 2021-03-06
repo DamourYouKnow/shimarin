@@ -1,6 +1,7 @@
-const Discord = require('discord.js');
-const http = require('axios');
-const helpers = require('./helpers.js');
+import * as Discord from 'discord.js';
+import http from 'axios';
+import { Helpers } from './helpers';
+
 
 const client = new Discord.Client();
 
@@ -8,7 +9,7 @@ client.on('ready', () => {
     console.log(`Logged in as ${client.user.tag}`);
 });
 
-const commands = new helpers.Commands();
+const commands = new Helpers.Commands();
 
 // Add your commands here...
 commands.add({name: 'ping'}, (message) => {
@@ -107,7 +108,7 @@ commands.add({name: 'watching'}, async (message, username) => {
 
 // Pass messages to message handler.
 client.on('message', (message) => {
-    helpers.messageHandler(commands, message);
+    Helpers.messageHandler(commands, message);
 });
 
-helpers.login(client);
+Helpers.login(client);
