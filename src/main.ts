@@ -1,7 +1,6 @@
 import * as Discord from 'discord.js';
 import http from 'axios';
 import { Helpers } from './helpers';
-import { type } from 'node:os';
 
 
 const client = new Discord.Client();
