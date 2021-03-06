@@ -1,12 +1,13 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as yaml from 'js-yaml';
+import { Message } from 'discord.js'
 
 const config = yaml.load(
     fs.readFileSync(path.resolve(__dirname, '../config.yml'))
 );
 
-type CommandHandler = (message: any, ...args: string[]) => void;
+type CommandHandler = (message: Message, ...args: string[]) => void;
 
 interface CommandInfo {
     name: string,
@@ -31,12 +32,12 @@ export module Helpers {
             return this.commands.has(command);
         }
 
-        execute(command: string, message: any, args: string[] = []) {
+        execute(command: string, message: Message, args: string[] = []) {
             this.commands.get(command).apply(null, [message, ...args]);
         }
     }
 
-    export function messageHandler(commands: Commands, message: any) {
+    export function messageHandler(commands: Commands, message: Message) {
         if (message.content.startsWith(config.commandPrefix)) {
             const command = message.content.substring(
                 config.commandPrefix.length
