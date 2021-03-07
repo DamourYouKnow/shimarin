@@ -46,7 +46,8 @@ bot.commands.add({
 });
 
 bot.commands.add({
-    name: 'list',
+    name: 'anilist',
+    aliases: ['list'],
     help: {
         shortDesc: `Gets a section of a AniList user's anime or manga list`,
         longDesc: `The user's list of completed anime will be returned if no 
