@@ -3,4 +3,4 @@
 token: null
 
 # Command prefix
-commandPrefix: "!"
+commandPrefix: ">"
