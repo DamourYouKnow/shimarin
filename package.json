@@ -1,8 +1,8 @@
 {
-  "name": "discord-bot",
+  "name": "shimarin",
   "version": "0.0.0",
   "description": "",
-  "main": "bot.ts",
+  "main": "main.ts",
   "scripts": {
     "start": "npx ./node_modules/ts-node/dist/bin.js ./src/main.ts",
     "lint": "./node_modules/.bin/eslint .",

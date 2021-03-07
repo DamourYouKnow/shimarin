@@ -2,8 +2,10 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as yaml from 'js-yaml';
 import * as Discord from 'discord.js';
+import { version } from '../package.json';
 
 type CommandHandler = (message: Discord.Message, ...args: string[]) => void;
+type Channel =  Discord.TextChannel | Discord.DMChannel | Discord.NewsChannel;
 
 interface CommandInfo {
     name: string,
@@ -40,15 +42,12 @@ export class Bot {
         }
     }
 
-    async sendError(
-        channel: Discord.TextChannel | Discord.DMChannel | Discord.NewsChannel,
-        message: string
-    ) {
-        channel.send(new Discord.MessageEmbed({
+    async sendError(channel: Channel, message: string) {
+        channel.send(new MessageEmbed({
             color: '#ff0000',
             title: 'An error occurred!',
             description: message
-        }));
+        }, this));
     }
 
     private async messageHandler(commands: Commands, message: Discord.Message) {
@@ -159,5 +158,20 @@ class Commands {
         args: string[] = []
     ) {
         await this.commands.get(command).apply(null, [message, ...args]);
+    }
+}
+export class MessageEmbed extends Discord.MessageEmbed {
+    constructor(
+        data: Discord.MessageEmbed | Discord.MessageEmbedOptions,
+        bot: Bot,
+    ) {
+        super(data);
+
+        if (!this.footer) {
+            this.footer = {
+                text: `${bot.client.user.username} v${version}`,
+                iconURL: bot.client.user.avatarURL()
+            }
+        }
     }
 }

@@ -129,7 +129,7 @@ function mediaListEmbed(
     const currentPage = mediaList.pageInfo.currentPage;
     const lastPage = mediaList.pageInfo.lastPage;
 
-    return new Discord.MessageEmbed({
+    return new Bot.MessageEmbed({
         color: embedColor,
         title: `${user.name}'s ${listLabels[mediaList.type][mediaList.status]}`,
         url: `https://anilist.co/user/${user.name}/animelist/Watching`,
@@ -137,8 +137,6 @@ function mediaListEmbed(
             url: user.avatar.medium,
         },
         fields: fields,
-        footer: {
-            text: `Page ${currentPage} / ${lastPage}`
-        }
-    });
+        description: `Page ${currentPage} / ${lastPage}`
+    }, bot);
 }
