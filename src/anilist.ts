@@ -38,6 +38,7 @@ export interface Media {
     },
     chapters: number | null
     episodes: number | null
+    isAdult: boolean
 }
 
 export interface PageInfo {
@@ -117,6 +118,7 @@ export async function getMediaListPage(
                         }
                         episodes
                         chapters
+                        isAdult
                     }
                     progress
                 }
@@ -127,7 +129,7 @@ export async function getMediaListPage(
             type: type,
             status: status,
             page: page,
-            perPage: 10
+            perPage: 6
         }
     );
     const results = response.data.Page.mediaList;

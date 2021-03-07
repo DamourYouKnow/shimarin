@@ -138,6 +138,8 @@ function mediaListEmbed(
         const media = entry.media;
         const resource = `${mediaList.type.toLowerCase()}/${entry.media.id}/`;
         const url = `https://anilist.co/${resource}`;
+        const urlLabel = media.isAdult ? 
+            `[Link (NSFW)](${url})` : `[Link](${url})`;
         const maxCount = { 
             'ANIME': media.episodes, 'MANGA': media.chapters
         }[mediaList.type];
@@ -147,7 +149,7 @@ function mediaListEmbed(
             || media.title.native
         return {
             name: title,
-            value: `${count.padEnd(15, ' ')}[Link](${url})`
+            value: `Progress: \`${count}\`\n${urlLabel}`
         }
     });
 
