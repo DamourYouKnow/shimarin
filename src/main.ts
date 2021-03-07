@@ -13,8 +13,8 @@ bot.commands.add({
         longDesc: 'This command is implemented for developer testing.',
         examples: ['ping']
     }
-}, (message) => {
-    message.channel.send('pong!');
+}, async (message) => {
+    await message.channel.send('pong!');
 });
 
 bot.commands.add({
@@ -27,8 +27,8 @@ bot.commands.add({
         },
         examples: ['watching DamourYouKnow']
     }
-}, (message, username) => {
-    postMediaList(message, username, 'ANIME', 'CURRENT');
+}, async (message, username) => {
+    await postMediaList(message, username, 'ANIME', 'CURRENT');
 });
 
 bot.commands.add({
@@ -41,8 +41,8 @@ bot.commands.add({
         },
         examples: ['reading DamourYouKnow']
     }
-}, (message, username) => {
-    postMediaList(message, username, 'MANGA', 'CURRENT');
+}, async (message, username) => {
+    await postMediaList(message, username, 'MANGA', 'CURRENT');
 });
 
 bot.commands.add({
@@ -73,7 +73,7 @@ bot.commands.add({
     if (argSet.has('dropped')) status = 'DROPPED';
     if (argSet.has('planned')) status = 'PLANNING';
 
-    postMediaList(message, username, type, status);
+    await postMediaList(message, username, type, status);
 });
 
 async function postMediaList(
@@ -81,7 +81,7 @@ async function postMediaList(
     username: string,
     type: AniList.MediaListType,
     status: AniList.MediaListStatus
-) {
+): Promise<void> {
     if (!username) {
         bot.sendError(message.channel, 'No AniList username was provided.');
         return;
@@ -101,7 +101,7 @@ async function postMediaList(
     );
 
     if (mediaList.pageInfo.total > mediaList.pageInfo.perPage) {
-        new Bot.EmbedNavigator(
+        await new Bot.EmbedNavigator(
             response,
             message.author,
             mediaList.pageInfo,

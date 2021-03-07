@@ -29,7 +29,7 @@ export class Bot {
                 },
                 examples: ['help', 'help help']
             }
-        }, (message, command) => {
+        }, async (message, command) => {
             if (command) {
                 message.channel.send(
                     new MessageEmbed(this.commands.help(command), this)
@@ -124,8 +124,8 @@ export class EmbedNavigator {
         this.generatePage = generatePage;
     }
 
-    async listen() {
-        const previousBtn = await this.message.react('⬅️');  
+    async listen(): Promise<void> {
+        const previousBtn = await this.message.react('⬅️');
         const nextBtn = await this.message.react('➡️');
         const filter: Discord.CollectorFilter = () => true;
         const collector = this.message.createReactionCollector(filter, {
@@ -172,7 +172,10 @@ export class EmbedNavigator {
     }
 }
 
-type CommandHandler = (message: Discord.Message, ...args: string[]) => void;
+type CommandHandler = (
+    message: Discord.Message,
+    ...args: string[]
+) => Promise<void>;
 
 interface Command {
     info: CommandInfo,
