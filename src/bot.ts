@@ -40,7 +40,18 @@ export class Bot {
         }
     }
 
-    private messageHandler(commands: Commands, message: Discord.Message) {
+    async sendError(
+        channel: Discord.TextChannel | Discord.DMChannel | Discord.NewsChannel,
+        message: string
+    ) {
+        channel.send(new Discord.MessageEmbed({
+            color: '#ff0000',
+            title: 'An error occurred!',
+            description: message
+        }));
+    }
+
+    private async messageHandler(commands: Commands, message: Discord.Message) {
         if (message.content.startsWith(this.config.commandPrefix)) {
             const command = message.content.substring(
                 this.config.commandPrefix.length
@@ -49,7 +60,15 @@ export class Bot {
                 const args = message.content.split(' ').slice(1).map((arg) => {
                     return arg.toLowerCase();
                 });
-                commands.execute(command, message, args);
+                try {
+                    await commands.execute(command, message, args);
+                } catch (err) {
+                    console.error(err);
+                    this.sendError(
+                        message.channel,
+                        err.message || 'An unexpected has error occurred.'
+                    );
+                }
             }
         }
     }
@@ -139,13 +158,6 @@ class Commands {
         message: Discord.Message,
         args: string[] = []
     ) {
-        try {
-            await this.commands
-                .get(command)
-                .apply(null, [message, ...args]);
-        } catch (err) {
-            console.error(err);
-            message.channel.send(err.message || 'An error ocurred.');
-        }
+        await this.commands.get(command).apply(null, [message, ...args]);
     }
 }

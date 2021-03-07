@@ -9,6 +9,7 @@ interface GraphError {
     message: string,
     status: number,
     locations: GraphErrorLocation[]
+    validation: {[key: string]: string}
 }
 
 interface GraphErrorLocation {
@@ -24,12 +25,20 @@ export class GraphAPI {
     }
 
     async query(query: string, variables: unknown): Promise<GraphResponse> {
-        const response = await http.post(this.url, {
-            query: query,
-            variables: variables
-        }, {
-            timeout: 5000
-        });
-        return response.data;
+        try {
+            const response = await http.post(this.url, {
+                query: query,
+                variables: variables
+            }, {
+                timeout: 5000
+            });
+            return response.data;
+        } catch (err) {
+            if (err.response && err.response?.data?.errors) {
+                return err.response.data;
+            } else {
+                throw err;
+            }
+        }
     }
 }

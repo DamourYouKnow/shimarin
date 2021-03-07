@@ -1,3 +1,4 @@
+import { O_NOCTTY } from 'node:constants';
 import { GraphAPI } from './graphql';
 
 const api = new GraphAPI('https://graphql.anilist.co');
@@ -73,6 +74,9 @@ export async function searchUser(
             username: username
         }
     )
+    if (response.errors && response.errors.some((e) => e.status == 404)) {
+        return null;
+    }
     return response.data.User as User;
 }
 

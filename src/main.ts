@@ -10,60 +10,12 @@ bot.commands.add({name: 'ping'}, (message) => {
     message.channel.send('pong!');
 });
 
-bot.commands.add({name: 'watching'}, async (message, username) => {
-    const user = await AniList.searchUser(username);
-    const mediaList = await AniList.getMediaListPage(
-        user.id,
-        'ANIME',
-        'CURRENT'
-    );
-    const response = await message.channel.send(
-        mediaListEmbed(user, mediaList)
-    );
-    new Bot.EmbedNavigator(
-        response,
-        message.author,
-        mediaList.pageInfo,
-        async (page) => {
-            return mediaListEmbed(
-                user,
-                await AniList.getMediaListPage(
-                    user.id,
-                    'ANIME',
-                    'CURRENT',
-                    page
-                )
-            );
-        }
-    ).listen();
+bot.commands.add({name: 'watching'}, (message, username) => {
+    postMediaList(message, username, 'ANIME', 'CURRENT');
 });
 
-bot.commands.add({name: 'reading'}, async (message, username) => {
-    const user = await AniList.searchUser(username);
-    const mediaList = await AniList.getMediaListPage(
-        user.id,
-        'MANGA',
-        'CURRENT'
-    );
-    const response = await message.channel.send(
-        mediaListEmbed(user, mediaList)
-    );
-    new Bot.EmbedNavigator(
-        response,
-        message.author,
-        mediaList.pageInfo,
-        async (page) => {
-            return mediaListEmbed(
-                user,
-                await AniList.getMediaListPage(
-                    user.id,
-                    'MANGA',
-                    'CURRENT',
-                    page
-                )
-            );
-        }
-    ).listen();
+bot.commands.add({name: 'reading'}, (message, username) => {
+    postMediaList(message, username, 'MANGA', 'CURRENT');
 });
 
 bot.commands.add({name: 'list'}, async (message, username, ...args) => {
@@ -77,7 +29,28 @@ bot.commands.add({name: 'list'}, async (message, username, ...args) => {
     if (argSet.has('dropped')) status = 'DROPPED';
     if (argSet.has('planned')) status = 'PLANNING';
 
+    postMediaList(message, username, type, status);
+});
+
+async function postMediaList(
+    message: Discord.Message,
+    username: string,
+    type: AniList.MediaListType,
+    status: AniList.MediaListStatus
+) {
+    if (!username) {
+        bot.sendError(message.channel, 'No username was provided.');
+        return;
+    }
     const user = await AniList.searchUser(username);
+    if (!user) {
+        bot.sendError(
+            message.channel,
+            `No AniList profile for ${username} was found.`
+        );
+        return;
+    }
+
     const mediaList = await AniList.getMediaListPage(user.id, type, status, 0);
     const response = await message.channel.send(
         mediaListEmbed(user, mediaList)
@@ -93,7 +66,7 @@ bot.commands.add({name: 'list'}, async (message, username, ...args) => {
             )
         }
     ).listen();
-});
+}
 
 function mediaListEmbed(
     user: AniList.User,
