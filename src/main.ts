@@ -6,26 +6,70 @@ import * as Bot from './bot';
 const bot = new Bot.Bot(new Discord.Client());
 bot.login();
 
-bot.commands.add({name: 'ping'}, (message) => {
+bot.commands.add({
+    name: 'ping',
+    help: {
+        shortDesc: 'Replies with pong!',
+        longDesc: 'This command is implemented for developer testing.',
+        examples: ['ping']
+    }
+}, (message) => {
     message.channel.send('pong!');
 });
 
-bot.commands.add({name: 'watching'}, (message, username) => {
+bot.commands.add({
+    name: 'watching',
+    help: {
+        shortDesc: `Gets the list of anime that a AniList user is currently 
+            watching.`,
+        arguments: {
+            'username': 'AniList username.'
+        },
+        examples: ['watching DamourYouKnow']
+    }
+}, (message, username) => {
     postMediaList(message, username, 'ANIME', 'CURRENT');
 });
 
-bot.commands.add({name: 'reading'}, (message, username) => {
+bot.commands.add({
+    name: 'reading',
+    help: {
+        shortDesc: `Gets the list of manga that a AniList user is currently 
+            reading.`,
+        arguments: {
+            'username': 'AniList username.'
+        },
+        examples: ['reading DamourYouKnow']
+    }
+}, (message, username) => {
     postMediaList(message, username, 'MANGA', 'CURRENT');
 });
 
-bot.commands.add({name: 'list'}, async (message, username, ...args) => {
+bot.commands.add({
+    name: 'list',
+    help: {
+        shortDesc: `Gets a section of a AniList user's anime or manga list`,
+        longDesc: `The user's list of completed anime will be returned if no 
+            other arguments are provided.`,
+        arguments: {
+            'username': 'AniList username.',
+            'type': `\`anime\` or \`manga\``,
+            'section': `\`completed\`, \`watching\`, \`reading\`, \`planned\` 
+                or \`dropped\`.`
+        },
+        examples: [
+            'list DamourYouKnow',
+            'list DamourYouKnow manga planned',
+        ]
+    }
+}, async (message, username, ...args) => {
     const argSet = new Set(args);
     
     let type: AniList.MediaListType = 'ANIME';
     if (argSet.has('manga')) type = 'MANGA';
 
     let status: AniList.MediaListStatus = 'COMPLETED';
-    if (argSet.has('watching')) status = 'CURRENT';
+    if (argSet.has('watching') || argSet.has('reading')) status = 'CURRENT';
     if (argSet.has('dropped')) status = 'DROPPED';
     if (argSet.has('planned')) status = 'PLANNING';
 

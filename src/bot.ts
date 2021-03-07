@@ -4,14 +4,11 @@ import * as yaml from 'js-yaml';
 import * as Discord from 'discord.js';
 import { version } from '../package.json';
 
-type CommandHandler = (message: Discord.Message, ...args: string[]) => void;
 type Channel =  Discord.TextChannel | Discord.DMChannel | Discord.NewsChannel;
 
-interface CommandInfo {
-    name: string,
-    aliases?: string[]
-}
-
+const config = yaml.load(
+    fs.readFileSync(path.resolve(__dirname, '../config.yml'))
+);
 export class Bot {
     client: Discord.Client;
     config: any;
@@ -19,10 +16,41 @@ export class Bot {
 
     constructor(client: Discord.Client) {
         this.client = client;
-        this.config = yaml.load(
-            fs.readFileSync(path.resolve(__dirname, '../config.yml'))
-        );
+        this.config = config;
+
         this.commands = new Commands();
+        this.commands.add({
+            name: 'help',
+            help: {
+                shortDesc: `Get a list of all commands or learn more about a 
+                    command.`,
+                arguments: {
+                    'command': 'The command to learn more about (Optional).'
+                },
+                examples: ['help', 'help help']
+            }
+        }, (message, command) => {
+            if (command) {
+                message.channel.send(
+                    new MessageEmbed(this.commands.help(command), this)
+                );
+            } else {
+                message.channel.send(new MessageEmbed({
+                    title: `${this.client.user.username} help`,
+                    color: '#ffffff',
+                    description: 'Here is the list of available commands:',
+                    fields: this.commands.list().map((info) => {
+                        return {
+                            name: `${this.config.commandPrefix}${info.name}`,
+                            value: info.help ?
+                                info.help.shortDesc : 'No description',
+                            inline: false
+                        }
+                    })
+                }, this));
+            }
+        });
+
         this.client.on('ready', () => {
             console.log(`Logged in as ${client.user.tag}`);
         });
@@ -135,17 +163,46 @@ export class EmbedNavigator {
     }
 }
 
+type CommandHandler = (message: Discord.Message, ...args: string[]) => void;
+
+interface Command {
+    info: CommandInfo,
+    handler: CommandHandler
+}
+
+interface CommandInfo {
+    name: string,
+    aliases?: string[],
+    help?: CommandHelp
+}
+
+interface CommandHelp {
+    shortDesc: string,
+    longDesc?: string,
+    arguments?: {[arg: string]: string},
+    examples?: string[]
+}
+
 class Commands {
-    commands: Map<string, CommandHandler>;
+    private commands: Map<string, Command>;
+    private commandInfoList: CommandInfo[];
 
     constructor() {
         this.commands = new Map();
+        this.commandInfoList = [];
     }
 
     add(command: CommandInfo, handler: CommandHandler) {
         [command.name, ...command.aliases || []].map((cmd) => {
-            this.commands.set(cmd, handler);
+            this.commands.set(cmd, { info: command, handler: handler });
         });
+        this.commandInfoList.push(command);
+        if (command?.help?.shortDesc) {
+            command.help.shortDesc = toSingleLine(command.help.shortDesc);
+        }
+        if (command?.help?.longDesc) {
+            command.help.longDesc = toSingleLine(command.help.longDesc);
+        }
     }
 
     exists(command: string): boolean {
@@ -157,9 +214,84 @@ class Commands {
         message: Discord.Message,
         args: string[] = []
     ) {
-        await this.commands.get(command).apply(null, [message, ...args]);
+        await this.commands.get(command).handler.apply(
+            null,
+            [message, ...args]
+        );
+    }
+
+    list(): CommandInfo[] {
+        return this.commandInfoList
+    }
+
+    help(command: string): Discord.MessageEmbedOptions {
+        const cmd = this.commands.get(command);
+        if (!cmd) {
+            return {
+                'title': 'Command not found',
+                'color': '#ff0000',
+                'description': `The command \`${command}\` does not exist.`
+            }
+        }
+
+        const help = cmd.info.help;
+        const fields: Discord.EmbedField[] = [];
+
+        if (help) {
+            if (cmd.info.aliases) {
+                fields.push({
+                    name: 'Aliases',
+                    value: cmd.info.aliases.map((alias) => `\`${alias}\``)
+                        .join(', '),
+                    inline: false
+                });
+            }
+            if (help.arguments) {
+                const argNames = [];
+                const args = [];
+                for (const arg in help.arguments) {
+                    argNames.push(arg);
+                    const argDesc = toSingleLine(help.arguments[arg]);
+                    args.push(`**${arg}**: ${argDesc}`);
+                }
+                fields.push({
+                    name: 'Usage',
+                    value: `\`${config.commandPrefix}${cmd.info.name} `
+                        + argNames.map((arg) => `<${arg}>`).join(' ') + '`',
+                    inline: false
+                });
+                fields.push({
+                    name: 'Arguments',
+                    value: args.join('\n'),
+                    inline: false
+                });
+            }
+            if (help.examples) {
+                fields.push({
+                    name: help.examples.length > 1 ? 'Examples' : 'Example',
+                    value: help.examples.map((ex) => {
+                        return `\`${config.commandPrefix + ex}\``;
+                    }).join(', '),
+                    inline: false
+                });
+            } 
+        }
+
+        const noInfoString = 'No help information exists for this command.';
+        let desc = help?.shortDesc || noInfoString;
+        if (help?.longDesc) {
+            desc += `\n\n${help.longDesc}`
+        }
+
+        return {
+            title: `${cmd.info.name} command help`,
+            color: '#ffffff',
+            description: desc,
+            fields: fields
+        };
     }
 }
+
 export class MessageEmbed extends Discord.MessageEmbed {
     constructor(
         data: Discord.MessageEmbed | Discord.MessageEmbedOptions,
@@ -174,4 +306,8 @@ export class MessageEmbed extends Discord.MessageEmbed {
             }
         }
     }
+}
+
+function toSingleLine(str: string): string {
+    return str.split('\n').join('').replace(/ +/g, ' ');
 }
