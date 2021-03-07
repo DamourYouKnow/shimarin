@@ -125,11 +125,12 @@ export class EmbedNavigator {
     }
 
     async listen() {
-        const previousBtn = await this.message.react('⬅️');
+        const previousBtn = await this.message.react('⬅️');  
         const nextBtn = await this.message.react('➡️');
         const filter: Discord.CollectorFilter = () => true;
         const collector = this.message.createReactionCollector(filter, {
-            dispose: true
+            dispose: true,
+            time: 1000 * 60 * 15
         });
 
         const navigatingUser = this.navigatingUser;
@@ -144,6 +145,14 @@ export class EmbedNavigator {
 
         collector.on('collect', handleReaction);
         collector.on('remove', handleReaction);
+        collector.on('end', async () => {
+            try {
+                await nextBtn.remove();
+                await previousBtn.remove();
+            } catch (err) {
+                console.error(err);
+            }
+        });
     }
 
     async next() {
