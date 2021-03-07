@@ -99,17 +99,20 @@ async function postMediaList(
     const response = await message.channel.send(
         mediaListEmbed(user, mediaList)
     );
-    new Bot.EmbedNavigator(
-        response,
-        message.author,
-        mediaList.pageInfo,
-        async (page) => {
-            return mediaListEmbed(
-                user,
-                await AniList.getMediaListPage(user.id, type, status, page)
-            )
-        }
-    ).listen();
+
+    if (mediaList.pageInfo.total > mediaList.pageInfo.perPage) {
+        new Bot.EmbedNavigator(
+            response,
+            message.author,
+            mediaList.pageInfo,
+            async (page) => {
+                return mediaListEmbed(
+                    user,
+                    await AniList.getMediaListPage(user.id, type, status, page)
+                )
+            }
+        ).listen();
+    }
 }
 
 function mediaListEmbed(
