@@ -74,7 +74,7 @@ export async function searchUser(
         {
             username: username
         }
-    )
+    );
     if (response.errors && response.errors.some((e) => e.status == 404)) {
         return null;
     }
@@ -85,7 +85,7 @@ export async function getMediaListPage(
     userId: number,
     type: MediaListType,
     status: MediaListStatus,
-    page: number = 0
+    page = 0
 ): Promise<MediaListPage> {
     const response = await api.query(
         `query (
@@ -138,5 +138,5 @@ export async function getMediaListPage(
         type: type,
         status: status,
         pageInfo: response.data.Page.pageInfo as PageInfo
-    }
+    };
 }

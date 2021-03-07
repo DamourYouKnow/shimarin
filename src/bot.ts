@@ -45,7 +45,7 @@ export class Bot {
                             value: info.help ?
                                 info.help.shortDesc : 'No description',
                             inline: false
-                        }
+                        };
                     })
                 }, this));
             }
@@ -241,7 +241,7 @@ class Commands {
     }
 
     list(): CommandInfo[] {
-        return this.commandInfoList
+        return this.commandInfoList;
     }
 
     help(command: string): Discord.MessageEmbedOptions {
@@ -251,7 +251,7 @@ class Commands {
                 'title': 'Command not found',
                 'color': '#ff0000',
                 'description': `The command \`${command}\` does not exist.`
-            }
+            };
         }
 
         const help = cmd.info.help;
@@ -300,7 +300,7 @@ class Commands {
         const noInfoString = 'No help information exists for this command.';
         let desc = help?.shortDesc || noInfoString;
         if (help?.longDesc) {
-            desc += `\n\n${help.longDesc}`
+            desc += `\n\n${help.longDesc}`;
         }
 
         return {
@@ -323,7 +323,7 @@ export class MessageEmbed extends Discord.MessageEmbed {
             this.footer = {
                 text: `${bot.client.user.username} v${version}`,
                 iconURL: bot.client.user.avatarURL()
-            }
+            };
         }
     }
 }

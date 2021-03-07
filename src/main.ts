@@ -110,7 +110,7 @@ async function postMediaList(
                 return mediaListEmbed(
                     user,
                     await AniList.getMediaListPage(user.id, type, status, page)
-                )
+                );
             }
         ).listen();
     }
@@ -146,11 +146,11 @@ function mediaListEmbed(
         const count = `${entry.progress} / ${maxCount || '?'}`;
         const title = media.title.english
             || media.title.romaji 
-            || media.title.native
+            || media.title.native;
         return {
             name: title,
             value: `Progress: \`${count}\`\n${urlLabel}`
-        }
+        };
     });
 
     type StatusTypeLabels = {
