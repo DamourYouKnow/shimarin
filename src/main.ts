@@ -150,11 +150,13 @@ function mediaListEmbed(
         }
     });
 
-    const listLabels: {
+    type StatusTypeLabels = {
         [type in AniList.MediaListType]: {
             [status in AniList.MediaListStatus]: string
         }
-    } = {
+    };
+
+    const listLabels: StatusTypeLabels = {
         'ANIME': {
             'COMPLETED': 'completed anime list',
             'CURRENT': 'watchlist',
@@ -172,6 +174,32 @@ function mediaListEmbed(
             'REPEATING': 're-reading list'
         }
     };
+    const urlTypes: {[type in AniList.MediaListType]: string} = {
+        'ANIME': 'animelist',
+        'MANGA': 'mangalist'
+    };
+    const urlStatuses: StatusTypeLabels = {
+        'ANIME': {
+            'COMPLETED': 'Completed',
+            'CURRENT': 'Watching',
+            'DROPPED': 'Dropped',
+            'PAUSED': 'Paused',
+            'PLANNING': 'Planning',
+            'REPEATING': 'Rewatching'
+        },
+        'MANGA': {
+            'COMPLETED': 'Completed',
+            'CURRENT': 'Reading',
+            'DROPPED': 'Dropped',
+            'PAUSED': 'Paused',
+            'PLANNING': 'Planning',
+            'REPEATING': 're-reading list'
+        }
+    };
+
+    const userUrl = `https://anilist.co/user/${user.name}`;
+    const urlType = urlTypes[mediaList.type];
+    const urlStatus = urlStatuses[mediaList.type][mediaList.status];
 
     const currentPage = mediaList.pageInfo.currentPage;
     const lastPage = mediaList.pageInfo.lastPage;
@@ -184,7 +212,7 @@ function mediaListEmbed(
     return new Bot.MessageEmbed({
         color: embedColor,
         title: `${user.name}'s ${listLabels[mediaList.type][mediaList.status]}`,
-        url: `https://anilist.co/user/${user.name}/animelist/Watching`,
+        url: `${userUrl}/${urlType}/${urlStatus}`,
         thumbnail: {
             url: user.avatar.medium,
         },
