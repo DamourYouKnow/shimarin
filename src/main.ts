@@ -173,6 +173,11 @@ function mediaListEmbed(
     const currentPage = mediaList.pageInfo.currentPage;
     const lastPage = mediaList.pageInfo.lastPage;
 
+    const description = mediaList.pageInfo.total == 0 ?
+        'There are no entries in this list.' :
+        mediaList.pageInfo.total > mediaList.pageInfo.perPage ?
+            `Page ${currentPage} / ${lastPage}` : undefined;
+
     return new Bot.MessageEmbed({
         color: embedColor,
         title: `${user.name}'s ${listLabels[mediaList.type][mediaList.status]}`,
@@ -181,6 +186,6 @@ function mediaListEmbed(
             url: user.avatar.medium,
         },
         fields: fields,
-        description: `Page ${currentPage} / ${lastPage}`
+        description: description
     }, bot);
 }
