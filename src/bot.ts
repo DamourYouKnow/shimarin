@@ -110,6 +110,7 @@ export class EmbedNavigator {
     message: Discord.Message;
     navigatingUser: Discord.User;
     pageInfo: PageInfo;
+    updating: boolean;
     generatePage: (page: number) => Promise<Discord.MessageEmbed>;
 
     constructor(
@@ -121,6 +122,7 @@ export class EmbedNavigator {
         this.message = message;
         this.navigatingUser = navigatingUser;
         this.pageInfo = pageInfo;
+        this.updating = true;
         this.generatePage = generatePage;
     }
 
@@ -138,7 +140,7 @@ export class EmbedNavigator {
             reaction: Discord.MessageReaction,
             user: Discord.User
         ) => {
-            if (user != navigatingUser) return;
+            if (this.updating || user != navigatingUser) return;
             if (reaction == nextBtn) this.next();
             if (reaction == previousBtn) this.previous();
         };
@@ -153,21 +155,27 @@ export class EmbedNavigator {
                 console.error(err);
             }
         });
+
+        this.updating = false;
     }
 
     async next() {
         if (this.pageInfo.currentPage < this.pageInfo.lastPage) {
             this.pageInfo.currentPage += 1;
+            this.updating = true;
             const embed = await this.generatePage(this.pageInfo.currentPage);
             await this.message.edit(embed);
+            this.updating = false;
         }
     }
 
     async previous() {
         if (this.pageInfo.currentPage > 0) {
             this.pageInfo.currentPage -= 1;
+            this.updating = true;
             const embed = await this.generatePage(this.pageInfo.currentPage);
             await this.message.edit(embed);
+            this.updating = false;
         }
     }
 }
