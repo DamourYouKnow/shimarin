@@ -2,5 +2,11 @@
 # REMEMBER: DON'T CHECK IN YOUR API TOKEN INTO PUBLIC SOURCE CONTROL!
 token: null
 
+# AniList API client credentials:
+anilist:
+  api_client_id: 5035
+  # REMEMBER: DON'T CHECK IN YOUR API SECRET INTO PUBLIC SOURCE CONTROL!
+  api_client_secret: null
+
 # Command prefix
 commandPrefix: ">"

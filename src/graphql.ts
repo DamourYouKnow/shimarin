@@ -1,4 +1,4 @@
-import http from 'axios';
+import http, { AxiosRequestConfig } from 'axios';
 
 interface GraphResponse {
     data: any,
@@ -24,14 +24,20 @@ export class GraphAPI {
         this.url = url;
     }
 
-    async query(query: string, variables: unknown): Promise<GraphResponse> {
+    async query(
+        query: string,
+        variables: unknown,
+        token?: string
+    ): Promise<GraphResponse> {
         try {
+            const config: AxiosRequestConfig = {
+                timeout: 5000
+            };
+            if (token) config.headers = { 'Authorization': `Bearer ${token}` };
             const response = await http.post(this.url, {
                 query: query,
                 variables: variables
-            }, {
-                timeout: 5000
-            });
+            }, config);
             return response.data;
         } catch (err) {
             if (err.response && err.response?.data?.errors) {

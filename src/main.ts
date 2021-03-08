@@ -1,6 +1,8 @@
 import * as Discord from 'discord.js';
+import http from 'axios';
 import * as AniList from './anilist';
 import * as Bot from './bot';
+import * as Data from './data';
 
 
 const bot = new Bot.Bot(new Discord.Client());
@@ -15,6 +17,126 @@ bot.commands.add({
     }
 }, async (message) => {
     await message.channel.send('pong!');
+});
+
+bot.commands.add({
+    name: 'connect'
+}, async (message) => {
+    // TODO: Ensure these exist before bot runs.
+    const clientId = bot.config.anilist.api_client_id;
+    const clientSecret = bot.config.anilist.api_client_secret
+        || process.env.ANILIST_API_SECRET;
+
+    const redirectUri = 'https://anilist.co/api/v2/oauth/pin';
+    const oauthUrl = 'https://anilist.co/api/v2/oauth/authorize'
+        + `?client_id=${clientId}`
+        + `&redirect_uri${redirectUri}&response_type=code`;
+
+    const createCollector = (
+        dmChannel: Discord.DMChannel
+    ): Discord.MessageCollector => {
+        return new Discord.MessageCollector(
+            dmChannel,
+            (m) => m.author.id == message.author.id,
+            { time: 1000 * 60 * 1, max: 1 }
+        );
+    };
+
+    const authCodeRequest = async (
+        dmChannel: Discord.DMChannel,
+        user: AniList.User
+    ): Promise<void> => {
+        await bot.sendEmbed(
+            dmChannel,
+            'Connect your AniList account',
+            `Click [here](${oauthUrl}) to log into your AniList account.`
+                + ` Send me your authentication code once you have given`
+                + ` me access.\n\nDo not share this code with anyone else.`
+        );
+        createCollector(dmChannel).on('collect', async (dm) => {
+            try {
+                const authCode = dm.content.split(' ')[0] || '';
+                const tokenUrl = 'https://anilist.co/api/v2/oauth/token';
+                const response = await http.post(tokenUrl, {
+                    grant_type: 'authorization_code',
+                    client_id: clientId,
+                    client_secret: clientSecret,
+                    redirect_uri: redirectUri,
+                    code: authCode
+                });
+                const token = response.data.access_token;
+                const success = await AniList.testConnection(user.id, token);
+                if (success) {
+                    await Data.addAccountConnection(
+                        message.author.id,
+                        String(user.id),
+                        authCode
+                    );
+                    await bot.sendEmbed(
+                        dmChannel,
+                        'Account connected',
+                        `You have successfully connected your AniList account.`
+                    );
+                } else {
+                    await bot.sendError(
+                        dmChannel,
+                        `I could not validate your authentication code.`
+                    );
+                }
+            } catch (err) {
+                console.log(err);
+            }
+        });
+    };
+
+    const usernameRequest = async (
+        dmChannel: Discord.DMChannel
+    ): Promise<void> => {
+        await bot.sendEmbed(dmChannel,
+            'Connect your AniList account',
+            'Please enter your AniList username.'
+        );
+        createCollector(dmChannel).on('collect', async (dm) => {
+            try {
+                const username = dm.content.split(' ')[0] || '';
+                const user = await AniList.searchUser(username);
+                if (user) {
+                    await authCodeRequest(dmChannel, user);
+                } else {
+                    await bot.sendError(
+                        dmChannel,
+                        `No AniList profile for **${username}** was found.`
+                    );
+                }
+            } catch (err) {
+                console.log(err);
+            }
+        });
+    };
+    
+    let dmChannel = message.author.dmChannel;
+
+    try {
+        if (!dmChannel) {
+            dmChannel = await message.author.createDM();
+        }
+        await usernameRequest(dmChannel);
+    } catch {
+        await bot.sendError(
+            message.channel,
+            'I had trouble direct messaging the instructions to connect'
+                + ' your AniList account.'
+        );
+    }
+
+    if (message.channel.type != 'dm') {
+        await bot.sendEmbed(
+            message.channel,
+            'Connect your AniList account',
+            'Instructions for connecting your AniList account have been sent'
+                + ' to your direct messages.'
+        );
+    }
 });
 
 bot.commands.add({

@@ -1,4 +1,3 @@
-import { O_NOCTTY } from 'node:constants';
 import { GraphAPI } from './graphql';
 
 const api = new GraphAPI('https://graphql.anilist.co');
@@ -53,6 +52,29 @@ export type MediaListType = 'ANIME' | 'MANGA';
 
 export type MediaListStatus = 'CURRENT' | 'PLANNING' | 'COMPLETED' | 'DROPPED'
     | 'PAUSED' | 'REPEATING';
+
+export async function testConnection(
+    userId: number,
+    token: string
+): Promise<boolean> {
+    try {
+        const response = await api.query(
+            `query ($userId: Int) {    
+                User(id: $userId) {
+                    id
+                    options {
+                        timezone
+                    }
+                }
+            }`,
+            { userId: userId },
+            token
+        );
+        return Boolean(response.data.User?.options?.timezone);
+    } catch (err) {
+        return false;
+    }
+}
 
 export async function searchUser(
     username: string
