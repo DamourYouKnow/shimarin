@@ -37,7 +37,6 @@ export class Bot {
             } else {
                 message.channel.send(new MessageEmbed({
                     title: `${this.client.user.username} help`,
-                    color: '#ffffff',
                     description: 'Here is the list of available commands:',
                     fields: this.commands.list().map((info) => {
                         return {
@@ -70,10 +69,24 @@ export class Bot {
         }
     }
 
-    async sendError(channel: Channel, message: string) {
-        channel.send(new MessageEmbed({
+    async sendError(
+        channel: Channel,
+        message: string
+    ): Promise<Discord.Message> {
+        return await channel.send(new MessageEmbed({
             color: '#ff0000',
             title: 'An error occurred!',
+            description: message
+        }, this));
+    }
+
+    async sendEmbed(
+        channel: Channel,
+        title: string,
+        message: string
+    ): Promise<Discord.Message> {
+        return await channel.send(new MessageEmbed({
+            title: title,
             description: message
         }, this));
     }
@@ -305,7 +318,6 @@ class Commands {
 
         return {
             title: `${cmd.info.name} command help`,
-            color: '#ffffff',
             description: desc,
             fields: fields
         };
@@ -324,6 +336,10 @@ export class MessageEmbed extends Discord.MessageEmbed {
                 text: `${bot.client.user.username} v${version}`,
                 iconURL: bot.client.user.avatarURL()
             };
+        }
+
+        if (!this.hexColor) {
+            this.setColor('#800080');
         }
     }
 }
