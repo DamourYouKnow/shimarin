@@ -38,7 +38,7 @@ bot.commands.add({
         return new Discord.MessageCollector(
             dmChannel,
             (m) => m.author.id == message.author.id,
-            { time: 1000 * 60 * 1, max: 1 }
+            { time: 1000 * 60 * 5, max: 1 }
         );
     };
 
