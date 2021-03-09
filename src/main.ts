@@ -84,7 +84,10 @@ bot.commands.add({
                     );
                 }
             } catch (err) {
-                console.log(err);
+                bot.sendError(
+                    dmChannel,
+                    `I could not validate your authentication code.`
+                ).catch(console.error);
             }
         });
     };
