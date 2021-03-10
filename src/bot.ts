@@ -114,6 +114,30 @@ export class Bot {
     }
 }
 
+export class MessageCollector {
+    onReply?: (reply: Discord.Message) => void;
+    onTimeout?: () => void; 
+
+    constructor(
+        channel: Discord.TextChannel | Discord.DMChannel,
+        messageFrom?: Discord.User,
+        timeout = 1000 * 60 * 5
+    ) {
+        const collector = new Discord.MessageCollector(channel, (message) => {
+            return !messageFrom || message.author.id == messageFrom.id;
+        }, {
+            time: timeout,
+            max: 1
+        });
+        collector.on('collect', (message: Discord.Message) => {
+            this?.onReply(message);
+        });
+        collector.on('end', () => {
+            this?.onTimeout();
+        });
+    }
+}
+
 interface PageInfo {
     currentPage: number,
     lastPage: number
