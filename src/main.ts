@@ -206,16 +206,26 @@ async function postMediaList(
         bot.sendError(message.channel, 'No AniList username was provided.');
         return;
     }
-    const user = await AniList.searchUser(username);
-    if (!user) {
+
+    const sendNotFound = async (): Promise<void> => {
         bot.sendError(
             message.channel,
             `No AniList profile for **${username}** was found.`
         );
+    };
+
+    const user = await AniList.searchUser(username);
+    if (!user) {
+        await sendNotFound();
         return;
     }
 
     const mediaList = await AniList.getMediaListPage(user.id, type, status, 0);
+    if (!mediaList) {
+        await sendNotFound();
+        return;
+    }
+
     const response = await message.channel.send(
         mediaListEmbed(user, mediaList)
     );

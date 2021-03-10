@@ -135,7 +135,7 @@ export async function getMediaListPage(
     type: MediaListType,
     status: MediaListStatus,
     page = 0
-): Promise<MediaListPage> {
+): Promise<MediaListPage | null> {
     const response = await api.query(
         `query (
             $userId: Int,
@@ -181,7 +181,8 @@ export async function getMediaListPage(
             perPage: 6
         }
     );
-    const results = response.data.Page.mediaList;
+    const results = response.data.Page?.mediaList;
+    if (!results) return null;
     return {
         entries: results as MediaListItem[],
         type: type,
