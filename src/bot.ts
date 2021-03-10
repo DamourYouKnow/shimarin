@@ -116,13 +116,15 @@ export class Bot {
 
 export class MessageCollector {
     onReply?: (reply: Discord.Message) => void;
-    onTimeout?: () => void; 
+    onTimeout?: () => void;
+    messageReceived: boolean;
 
     constructor(
         channel: Discord.TextChannel | Discord.DMChannel,
         messageFrom?: Discord.User,
         timeout = 1000 * 60 * 5
     ) {
+        this.messageReceived = false;
         const collector = new Discord.MessageCollector(channel, (message) => {
             return !messageFrom || message.author.id == messageFrom.id;
         }, {
@@ -130,10 +132,14 @@ export class MessageCollector {
             max: 1
         });
         collector.on('collect', (message: Discord.Message) => {
-            this?.onReply(message);
+            if (this.onReply) {
+                this.onReply(message);
+            }
         });
         collector.on('end', () => {
-            this?.onTimeout();
+            if (!this.messageReceived && this.onTimeout) {
+                this.onTimeout();
+            }
         });
     }
 }
