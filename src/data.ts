@@ -1,5 +1,4 @@
 import * as Mongo from 'mongodb';
-import { updateTypeAssertion } from 'typescript';
 
 const dbUrl = 'mongodb://localhost:27017';
 const dbName = 'shimarin';
