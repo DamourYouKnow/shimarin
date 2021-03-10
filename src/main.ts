@@ -23,7 +23,7 @@ bot.commands.add({
     help: {
         'shortDesc': 'Connects your AniList account.',
         'longDesc': `Connecting your account will allow you to use features 
-            that require reading your account data.`
+            that require verifying your account or reading your account data.`
     }
 }, async (message) => {
     // TODO: Ensure these exist before bot runs.
