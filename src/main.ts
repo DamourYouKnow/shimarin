@@ -19,7 +19,12 @@ bot.commands.add({
 });
 
 bot.commands.add({
-    name: 'connect'
+    name: 'connect',
+    help: {
+        'shortDesc': 'Connects your AniList account.',
+        'longDesc': `Connecting your account will allow you to use features 
+            that require reading your account data.`
+    }
 }, async (message) => {
     // TODO: Ensure these exist before bot runs.
     const clientId = bot.config.anilist.api_client_id;
