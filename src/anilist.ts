@@ -1,6 +1,8 @@
+import fetch from 'node-fetch';
 import { GraphAPI } from './graphql';
 
-const api = new GraphAPI('https://graphql.anilist.co');
+export const redirectUri = 'https://anilist.co/api/v2/oauth/pin';
+export const oauthUrl = 'https://anilist.co/api/v2/oauth/authorize';
 
 export interface User {
     id: number,
@@ -52,6 +54,31 @@ export type MediaListType = 'ANIME' | 'MANGA';
 
 export type MediaListStatus = 'CURRENT' | 'PLANNING' | 'COMPLETED' | 'DROPPED'
     | 'PAUSED' | 'REPEATING';
+
+const api = new GraphAPI('https://graphql.anilist.co');
+
+export async function getToken(
+    apiClientId: number,
+    apiClientSecret: string, 
+    authCode: string
+): Promise<string | null> {
+    const response = await fetch('https://anilist.co/api/v2/oauth/token', {
+        method: 'POST',
+        timeout: 5000,
+        headers: {
+            'Content-type': 'application/json'
+        },
+        body: JSON.stringify({
+            grant_type: 'authorization_code',
+            client_id: apiClientId,
+            client_secret: apiClientSecret,
+            redirect_uri: redirectUri,
+            code: authCode
+        })
+    });
+    if (!response.ok) return null;
+    return (await response.json()).access_token;
+}
 
 export async function testConnection(
     userId: number,

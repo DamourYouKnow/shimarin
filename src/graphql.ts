@@ -1,4 +1,4 @@
-import http, { AxiosRequestConfig } from 'axios';
+import fetch from 'node-fetch';
 
 interface GraphResponse {
     data: any,
@@ -16,7 +16,6 @@ interface GraphErrorLocation {
     line: number,
     column: number
 }
-
 export class GraphAPI {
     url: string;
 
@@ -29,22 +28,18 @@ export class GraphAPI {
         variables: unknown,
         token?: string
     ): Promise<GraphResponse> {
-        try {
-            const config: AxiosRequestConfig = {
-                timeout: 5000
-            };
-            if (token) config.headers = { 'Authorization': `Bearer ${token}` };
-            const response = await http.post(this.url, {
+        const response = await fetch(this.url, {
+            method: 'POST',
+            timeout: 5000,
+            headers:  {
+                'Content-Type': 'application/json',
+                ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+            },
+            body: JSON.stringify({
                 query: query,
                 variables: variables
-            }, config);
-            return response.data;
-        } catch (err) {
-            if (err.response && err.response?.data?.errors) {
-                return err.response.data;
-            } else {
-                throw err;
-            }
-        }
+            })
+        });
+        return await response.json() as GraphResponse;
     }
 }

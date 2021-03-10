@@ -1,5 +1,4 @@
 import * as Discord from 'discord.js';
-import http from 'axios';
 import * as AniList from './anilist';
 import * as Bot from './bot';
 import * as Data from './data';
@@ -27,10 +26,9 @@ bot.commands.add({
     const clientSecret = bot.config.anilist.api_client_secret
         || process.env.ANILIST_API_SECRET;
 
-    const redirectUri = 'https://anilist.co/api/v2/oauth/pin';
-    const oauthUrl = 'https://anilist.co/api/v2/oauth/authorize'
+    const oauthUrl = AniList.oauthUrl
         + `?client_id=${clientId}`
-        + `&redirect_uri${redirectUri}&response_type=code`;
+        + `&redirect_uri${AniList.redirectUri}&response_type=code`;
 
     const createCollector = (
         dmChannel: Discord.DMChannel
@@ -56,15 +54,17 @@ bot.commands.add({
         createCollector(dmChannel).on('collect', async (dm) => {
             try {
                 const authCode = dm.content.split(' ')[0] || '';
-                const tokenUrl = 'https://anilist.co/api/v2/oauth/token';
-                const response = await http.post(tokenUrl, {
-                    grant_type: 'authorization_code',
-                    client_id: clientId,
-                    client_secret: clientSecret,
-                    redirect_uri: redirectUri,
-                    code: authCode
-                });
-                const token = response.data.access_token;
+                const token = await AniList.getToken(
+                    clientId,
+                    clientSecret,
+                    authCode
+                );
+                if (!token) {
+                    await bot.sendError(
+                        dmChannel,
+                        'The authentication code you have provided is invalid'
+                    );
+                }
                 const success = await AniList.testConnection(user.id, token);
                 if (success) {
                     await Data.addAccountConnection(
@@ -80,14 +80,14 @@ bot.commands.add({
                 } else {
                     await bot.sendError(
                         dmChannel,
-                        `I could not validate your authentication code.`
+                        `Your authentication code could not be linked to the `
+                            + `account **${user.name}**. Are you sure the `
+                            + `provided username matches the account you `
+                            + `logged into?`
                     );
                 }
             } catch (err) {
-                bot.sendError(
-                    dmChannel,
-                    `I could not validate your authentication code.`
-                ).catch(console.error);
+                console.log(err);
             }
         });
     };
