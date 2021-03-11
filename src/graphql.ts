@@ -33,6 +33,7 @@ export class GraphAPI {
             timeout: 5000,
             headers:  {
                 'Content-Type': 'application/json',
+                'Accept': 'application/json',
                 ...(token ? { 'Authorization': `Bearer ${token}` } : {})
             },
             body: JSON.stringify({

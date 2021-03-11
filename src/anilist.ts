@@ -1,5 +1,6 @@
 import fetch from 'node-fetch';
 import { GraphAPI } from './graphql';
+import * as Data from './data';
 
 export const redirectUri = 'https://anilist.co/api/v2/oauth/pin';
 export const oauthUrl = 'https://anilist.co/api/v2/oauth/authorize';
@@ -17,15 +18,15 @@ export interface User {
 
 export interface Viewer extends User {
     options: {
-        titleLanguage: string,
+        titleLanguage: TitleLanguage,
         displayAdultContent: boolean,
         profileColor: string
     }
 }
 
 export interface View<ViewType> {
-    item: ViewType,
-    viewer: Viewer
+    content: ViewType,
+    viewer?: Viewer
 }
 
 export interface MediaList {
@@ -57,7 +58,7 @@ export interface Media {
 }
 
 export interface Page<ContentType> {
-    content: ContentType[],
+    items: ContentType[],
     info: PageInfo
 }
 
@@ -74,20 +75,9 @@ export type MediaListType = 'ANIME' | 'MANGA';
 export type MediaListStatus = 'CURRENT' | 'PLANNING' | 'COMPLETED' | 'DROPPED'
     | 'PAUSED' | 'REPEATING';
 
-const api = new GraphAPI('https://graphql.anilist.co');
+export type TitleLanguage = 'ENGLISH' | 'ROMAJI' | 'NATIVE';
 
-const viewerQuery = `Viewer {
-    id
-    name
-    options {
-        titleLanguage
-        displayAdultContent
-        profileColor
-    }
-    avatar {
-        medium
-    }
-}`;
+const api = new GraphAPI('https://graphql.anilist.co');
 
 export async function getToken(
     apiClientId: number,
@@ -135,6 +125,29 @@ export async function testConnection(
     }
 }
 
+export async function getViewer(discordId: string): Promise<Viewer | null> {
+    const connection = await Data.getAccountConnection(discordId);
+    if (!connection) return null;
+    const response = await api.query(
+        `
+        {
+            Viewer {
+                id
+                name
+                options {
+                    titleLanguage
+                    displayAdultContent
+                    profileColor
+                }
+                avatar {
+                    medium
+                }
+            }
+        }`,
+    {}, connection.token);
+    return response.data.Viewer as Viewer;
+}
+
 export async function searchUser(
     username: string
 ): Promise<User | null> {
@@ -165,8 +178,9 @@ export async function searchUser(
 export async function getMediaListPage(
     userId: number,
     filter: MediaListFilter,
-    page = 0
-): Promise<Page<MediaListItem> | null> {
+    page: number,
+    viewer?: Viewer
+): Promise<View<Page<MediaListItem>> | null> {
     const response = await api.query(
         `query (
             $userId: Int,
@@ -186,7 +200,7 @@ export async function getMediaListPage(
                 mediaList (
                     userId: $userId,
                     type: $type,
-                    status: $status
+                    status: $status,
                     sort: [UPDATED_TIME_DESC]
                 ) {
                     media {
@@ -215,7 +229,10 @@ export async function getMediaListPage(
     const results = response.data.Page?.mediaList;
     if (!results) return null;
     return {
-        content: results as MediaListItem[],
-        info: response.data.Page.pageInfo as PageInfo
+        content: {
+            items: results as MediaListItem[],
+            info: response.data.Page.pageInfo as PageInfo
+        },
+        viewer: viewer
     };
 }

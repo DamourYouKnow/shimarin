@@ -90,7 +90,7 @@ bot.commands.add({
                     await Data.addAccountConnection(
                         message.author.id,
                         String(user.id),
-                        authCode
+                        token
                     );
                     await bot.sendEmbed(
                         dmChannel,
@@ -223,31 +223,42 @@ async function postMediaList(
         );
     };
 
+    const viewer = await AniList.getViewer(message.author.id);
     const user = await AniList.searchUser(username);
     if (!user) {
         await sendNotFound();
         return;
     }
 
-    const mediaListPage = await AniList.getMediaListPage(user.id, filter, 0);
-    if (!mediaListPage) {
+    const mediaListPageView = await AniList.getMediaListPage(
+        user.id,
+        filter,
+        0,
+        viewer
+    );
+    if (!mediaListPageView) {
         await sendNotFound();
         return;
     }
 
     const response = await message.channel.send(
-        mediaListEmbed(user, mediaListPage, filter)
+        mediaListEmbed(user, mediaListPageView, filter)
     );
 
-    if (mediaListPage.info.total > mediaListPage.info.perPage) {
-        await new Bot.EmbedNavigator(
-            response,
+    const pageInfo = mediaListPageView.content.info;
+    if (pageInfo.total > pageInfo.perPage) {
+        await new Bot.EmbedNavigator(response,
             message.author,
-            mediaListPage.info,
+            pageInfo,
             async (page) => {
                 return mediaListEmbed(
                     user,
-                    await AniList.getMediaListPage(user.id, filter, page),
+                    await AniList.getMediaListPage(
+                        user.id,
+                        filter,
+                        page,
+                        viewer
+                    ),
                     filter
                 );
             }
@@ -257,7 +268,7 @@ async function postMediaList(
 
 function mediaListEmbed(
     user: AniList.User,
-    mediaListPage: AniList.Page<AniList.MediaListItem>,
+    mediaListPageView: AniList.View<AniList.Page<AniList.MediaListItem>>,
     filter: AniList.MediaListFilter
 ): Discord.MessageEmbed {
     const colors: {[color: string]: string}  = {
@@ -270,11 +281,15 @@ function mediaListEmbed(
         'gray': '#677b94'
     };
 
+    const mediaList = mediaListPageView.content.items;
+    const pageInfo = mediaListPageView.content.info;
+    const viewer = mediaListPageView.viewer;
+
     const profileColor = user.options.profileColor || '#dec027';
     const embedColor = profileColor.startsWith('#') ?
         profileColor : colors[profileColor];
 
-    const fields = mediaListPage.content.map((entry) => {
+    const fields = mediaList.map((entry) => {
         const media = entry.media;
         const resource = `${filter.type.toLowerCase()}/${entry.media.id}/`;
         const url = `https://anilist.co/${resource}`;
@@ -284,11 +299,16 @@ function mediaListEmbed(
             'ANIME': media.episodes, 'MANGA': media.chapters
         }[filter.type];
         const count = `${entry.progress} / ${maxCount || '?'}`;
-        const title = media.title.english
-            || media.title.romaji 
-            || media.title.native;
+        const title = media.title;
+        const titleOrders: {[lang in AniList.TitleLanguage]: string[]} = {
+            'ENGLISH': [title.english, title.romaji, title.native],
+            'ROMAJI': [title.romaji, title.english, title.native],
+            'NATIVE': [title.native, title.romaji, title.english]
+        };
+        const titleOrder = viewer ?
+            titleOrders[viewer.options.titleLanguage] : titleOrders['ENGLISH'];
         return {
-            name: title,
+            name: titleOrder.find((title) => title != null) || 'No title',
             value: `Progress: \`${count}\`\n${urlLabel}`
         };
     });
@@ -344,13 +364,10 @@ function mediaListEmbed(
     const urlType = urlTypes[filter.type];
     const urlStatus = urlStatuses[filter.type][filter.status];
 
-    const currentPage = mediaListPage.info.currentPage;
-    const lastPage = mediaListPage.info.lastPage;
-
-    const description = mediaListPage.info.total == 0 ?
+    const description = pageInfo.total == 0 ?
         'There are no entries in this list.' :
-        mediaListPage.info.total > mediaListPage.info.perPage ?
-            `Page ${currentPage} / ${lastPage}` : undefined;
+        pageInfo.total > pageInfo.perPage ?
+            `Page ${pageInfo.currentPage} / ${pageInfo.lastPage}` : undefined;
 
     return new Bot.MessageEmbed({
         color: embedColor,
