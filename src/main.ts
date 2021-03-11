@@ -147,7 +147,10 @@ bot.commands.add({
         examples: ['watching DamourYouKnow']
     }
 }, async (message, username) => {
-    await postMediaList(message, username, 'ANIME', 'CURRENT');
+    await postMediaList(message, username, {
+        type: 'ANIME',
+        status: 'CURRENT'
+    });
 });
 
 bot.commands.add({
@@ -161,7 +164,10 @@ bot.commands.add({
         examples: ['reading DamourYouKnow']
     }
 }, async (message, username) => {
-    await postMediaList(message, username, 'MANGA', 'CURRENT');
+    await postMediaList(message, username, {
+        type: 'MANGA',
+        status: 'CURRENT'
+    });
 });
 
 bot.commands.add({
@@ -184,23 +190,26 @@ bot.commands.add({
     }
 }, async (message, username, ...args) => {
     const argSet = new Set(args);
+    const filter: AniList.MediaListFilter = {
+        type: 'ANIME',
+        status: 'COMPLETED'
+    };
     
-    let type: AniList.MediaListType = 'ANIME';
-    if (argSet.has('manga')) type = 'MANGA';
+    if (argSet.has('manga')) filter.type = 'MANGA';
 
-    let status: AniList.MediaListStatus = 'COMPLETED';
-    if (argSet.has('watching') || argSet.has('reading')) status = 'CURRENT';
-    if (argSet.has('dropped')) status = 'DROPPED';
-    if (argSet.has('planned')) status = 'PLANNING';
+    if (argSet.has('watching') || argSet.has('reading')) {
+        filter.status = 'CURRENT';
+    }
+    if (argSet.has('dropped')) filter.status = 'DROPPED';
+    if (argSet.has('planned')) filter.status = 'PLANNING';
 
-    await postMediaList(message, username, type, status);
+    await postMediaList(message, username, filter);
 });
 
 async function postMediaList(
     message: Discord.Message,
     username: string,
-    type: AniList.MediaListType,
-    status: AniList.MediaListStatus
+    filter: AniList.MediaListFilter
 ): Promise<void> {
     if (!username) {
         bot.sendError(message.channel, 'No AniList username was provided.');
@@ -220,25 +229,26 @@ async function postMediaList(
         return;
     }
 
-    const mediaList = await AniList.getMediaListPage(user.id, type, status, 0);
-    if (!mediaList) {
+    const mediaListPage = await AniList.getMediaListPage(user.id, filter, 0);
+    if (!mediaListPage) {
         await sendNotFound();
         return;
     }
 
     const response = await message.channel.send(
-        mediaListEmbed(user, mediaList)
+        mediaListEmbed(user, mediaListPage, filter)
     );
 
-    if (mediaList.pageInfo.total > mediaList.pageInfo.perPage) {
+    if (mediaListPage.info.total > mediaListPage.info.perPage) {
         await new Bot.EmbedNavigator(
             response,
             message.author,
-            mediaList.pageInfo,
+            mediaListPage.info,
             async (page) => {
                 return mediaListEmbed(
                     user,
-                    await AniList.getMediaListPage(user.id, type, status, page)
+                    await AniList.getMediaListPage(user.id, filter, page),
+                    filter
                 );
             }
         ).listen();
@@ -247,7 +257,8 @@ async function postMediaList(
 
 function mediaListEmbed(
     user: AniList.User,
-    mediaList: AniList.MediaListPage
+    mediaListPage: AniList.Page<AniList.MediaListItem>,
+    filter: AniList.MediaListFilter
 ): Discord.MessageEmbed {
     const colors: {[color: string]: string}  = {
         'blue': '#3db4f2',
@@ -263,15 +274,15 @@ function mediaListEmbed(
     const embedColor = profileColor.startsWith('#') ?
         profileColor : colors[profileColor];
 
-    const fields = mediaList.entries.map((entry) => {
+    const fields = mediaListPage.content.map((entry) => {
         const media = entry.media;
-        const resource = `${mediaList.type.toLowerCase()}/${entry.media.id}/`;
+        const resource = `${filter.type.toLowerCase()}/${entry.media.id}/`;
         const url = `https://anilist.co/${resource}`;
         const urlLabel = media.isAdult ? 
             `[Link (NSFW)](${url})` : `[Link](${url})`;
         const maxCount = { 
             'ANIME': media.episodes, 'MANGA': media.chapters
-        }[mediaList.type];
+        }[filter.type];
         const count = `${entry.progress} / ${maxCount || '?'}`;
         const title = media.title.english
             || media.title.romaji 
@@ -330,20 +341,20 @@ function mediaListEmbed(
     };
 
     const userUrl = `https://anilist.co/user/${user.name}`;
-    const urlType = urlTypes[mediaList.type];
-    const urlStatus = urlStatuses[mediaList.type][mediaList.status];
+    const urlType = urlTypes[filter.type];
+    const urlStatus = urlStatuses[filter.type][filter.status];
 
-    const currentPage = mediaList.pageInfo.currentPage;
-    const lastPage = mediaList.pageInfo.lastPage;
+    const currentPage = mediaListPage.info.currentPage;
+    const lastPage = mediaListPage.info.lastPage;
 
-    const description = mediaList.pageInfo.total == 0 ?
+    const description = mediaListPage.info.total == 0 ?
         'There are no entries in this list.' :
-        mediaList.pageInfo.total > mediaList.pageInfo.perPage ?
+        mediaListPage.info.total > mediaListPage.info.perPage ?
             `Page ${currentPage} / ${lastPage}` : undefined;
 
     return new Bot.MessageEmbed({
         color: embedColor,
-        title: `${user.name}'s ${listLabels[mediaList.type][mediaList.status]}`,
+        title: `${user.name}'s ${listLabels[filter.type][filter.status]}`,
         url: `${userUrl}/${urlType}/${urlStatus}`,
         thumbnail: {
             url: user.avatar.medium,

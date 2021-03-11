@@ -15,14 +15,28 @@ export interface User {
     }
 }
 
+export interface Viewer extends User {
+    options: {
+        titleLanguage: string,
+        displayAdultContent: boolean,
+        profileColor: string
+    }
+}
+
+export interface View<ViewType> {
+    item: ViewType,
+    viewer: Viewer
+}
+
 export interface MediaList {
     type: MediaListType,
     status: MediaListStatus
     entries: MediaListItem[]
 }
 
-export interface MediaListPage extends MediaList {
-    pageInfo: PageInfo
+export interface MediaListFilter {
+    type: MediaListType,
+    status: MediaListStatus
 }
 
 export interface MediaListItem {
@@ -42,6 +56,11 @@ export interface Media {
     isAdult: boolean
 }
 
+export interface Page<ContentType> {
+    content: ContentType[],
+    info: PageInfo
+}
+
 export interface PageInfo {
     total: number,
     perPage: number,
@@ -56,6 +75,19 @@ export type MediaListStatus = 'CURRENT' | 'PLANNING' | 'COMPLETED' | 'DROPPED'
     | 'PAUSED' | 'REPEATING';
 
 const api = new GraphAPI('https://graphql.anilist.co');
+
+const viewerQuery = `Viewer {
+    id
+    name
+    options {
+        titleLanguage
+        displayAdultContent
+        profileColor
+    }
+    avatar {
+        medium
+    }
+}`;
 
 export async function getToken(
     apiClientId: number,
@@ -132,10 +164,9 @@ export async function searchUser(
 
 export async function getMediaListPage(
     userId: number,
-    type: MediaListType,
-    status: MediaListStatus,
+    filter: MediaListFilter,
     page = 0
-): Promise<MediaListPage | null> {
+): Promise<Page<MediaListItem> | null> {
     const response = await api.query(
         `query (
             $userId: Int,
@@ -175,8 +206,8 @@ export async function getMediaListPage(
         }`,
         {
             userId: userId,
-            type: type,
-            status: status,
+            type: filter.type,
+            status: filter.status,
             page: page,
             perPage: 6
         }
@@ -184,9 +215,7 @@ export async function getMediaListPage(
     const results = response.data.Page?.mediaList;
     if (!results) return null;
     return {
-        entries: results as MediaListItem[],
-        type: type,
-        status: status,
-        pageInfo: response.data.Page.pageInfo as PageInfo
+        content: results as MediaListItem[],
+        info: response.data.Page.pageInfo as PageInfo
     };
 }
