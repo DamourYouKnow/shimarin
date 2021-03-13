@@ -120,11 +120,14 @@ export class MessageCollector {
     messageReceived: boolean;
 
     constructor(
-        channel: Discord.TextChannel | Discord.DMChannel,
+        channel: Discord.TextChannel | Discord.DMChannel | Discord.NewsChannel,
         messageFrom?: Discord.User,
         timeout = 1000 * 60 * 5
     ) {
         this.messageReceived = false;
+        if (channel instanceof Discord.NewsChannel) {
+            throw Error('channel cannot be of type NewsChannel');
+        }
         const collector = new Discord.MessageCollector(channel, (message) => {
             return !messageFrom || message.author.id == messageFrom.id;
         }, {

@@ -1,4 +1,6 @@
 import * as Discord from 'discord.js';
+import { type } from 'node:os';
+import { getConfigFileParsingDiagnostics } from 'typescript';
 import * as AniList from './anilist';
 import * as Bot from './bot';
 import * as Data from './data';
@@ -137,6 +139,59 @@ bot.commands.add({
 });
 
 bot.commands.add({
+    name: 'anime',
+    help: {
+        shortDesc: 'Search for information about an anime',
+        arguments: {
+            'title': 'Anime title'
+        },
+        examples: ['search yuru camp']
+    }
+}, async (message) => {
+    const search = message.content.split(' ').slice(1).join(' ');
+    if (!search) {
+        await bot.sendError(message.channel, 'No anime title was provided.');
+        return;
+    }
+    const viewer = await AniList.getViewer(message.author.id);
+    const mediaSearchView = await AniList.getMediaSearchPage(
+        search,
+        { type: 'ANIME' },
+        0,
+        viewer
+    );
+    const results = mediaSearchView.content.items;
+    if (results.length == 0) {
+        await bot.sendEmbed(
+            message.channel,
+            'No results found',
+            'Double check your search query and try again.'
+        );
+        return;
+    }
+    if (results.length == 1) {
+        await message.channel.send(mediaEmbed({
+            content: results[0],
+            viewer: viewer
+        }));
+        return;
+    }
+    const response = await message.channel.send(mediaSearchEmbed(
+        mediaSearchView
+    ));
+    const collector = new Bot.MessageCollector(message.channel, message.author);
+    collector.onReply = (reply) => {
+        const selected = Number(reply.content);
+        if (!isNaN(selected) && selected >= 1 && selected <= results.length) {
+            response.edit(mediaEmbed({
+                content: results[selected-1],
+                viewer: viewer
+            })).catch(console.error);
+        }
+    };
+});
+
+bot.commands.add({
     name: 'watching',
     help: {
         shortDesc: `Gets the list of anime that a AniList user is currently 
@@ -266,6 +321,58 @@ async function postMediaList(
     }
 }
 
+function mediaEmbed(
+    mediaView: AniList.View<AniList.Media>
+): Discord.MessageEmbed {
+    const media = mediaView.content;
+    return new Bot.MessageEmbed({
+        title: AniList.mediaDisplayTitle(media.title),
+        url: media.siteUrl,
+        thumbnail: {
+            url: media.coverImage.medium,
+        },
+        description: media.description
+            .replace(/(<br>)+/g, '\n\n')
+            .replace(/(\n\n)+/g, '\n\n')
+            .replace(/<i>/g, '*').replace(/<\/i>/g, '*'),
+        fields: [
+            {
+                name: 'Format',
+                value: AniList.mediaFormatLabels[media.format],
+                inline: true
+            },
+            {
+                name: 'Average score',
+                value: `${(media.averageScore / 10).toFixed(1)} / 10`,
+                inline: true
+            },
+            {
+                name: 'Genres',
+                value: media.genres.join(', ') || 'None',
+                inline: true,
+            }
+        ]
+    }, bot);
+} 
+
+function mediaSearchEmbed(
+    mediaSearchView: AniList.View<AniList.Page<AniList.Media>>
+): Discord.MessageEmbed {
+    const mediaList = mediaSearchView.content;
+    const viewer = mediaSearchView.viewer;
+    const fields = mediaList.items.map((media, i) => {
+        return {
+            name: `${i+1}. ${AniList.mediaDisplayTitle(media.title, viewer)}`,
+            value: AniList.mediaFormatLabels[media.format] || 'No format'
+        };
+    });
+    return new Bot.MessageEmbed({
+        title: 'Search results',
+        description: 'Enter the number of the content you are looking for.',
+        fields: fields
+    }, bot);
+}
+
 function mediaListEmbed(
     user: AniList.User,
     mediaListPageView: AniList.View<AniList.Page<AniList.MediaListItem>>,
@@ -299,22 +406,14 @@ function mediaListEmbed(
             'ANIME': media.episodes, 'MANGA': media.chapters
         }[filter.type];
         const count = `${entry.progress} / ${maxCount || '?'}`;
-        const title = media.title;
-        const titleOrders: {[lang in AniList.TitleLanguage]: string[]} = {
-            'ENGLISH': [title.english, title.romaji, title.native],
-            'ROMAJI': [title.romaji, title.english, title.native],
-            'NATIVE': [title.native, title.romaji, title.english]
-        };
-        const titleOrder = viewer ?
-            titleOrders[viewer.options.titleLanguage] : titleOrders['ENGLISH'];
         return {
-            name: titleOrder.find((title) => title != null) || 'No title',
+            name: AniList.mediaDisplayTitle(media.title, viewer),
             value: `Progress: \`${count}\`\n${urlLabel}`
         };
     });
 
     type StatusTypeLabels = {
-        [type in AniList.MediaListType]: {
+        [type in AniList.MediaType]: {
             [status in AniList.MediaListStatus]: string
         }
     };
@@ -337,7 +436,7 @@ function mediaListEmbed(
             'REPEATING': 're-reading list'
         }
     };
-    const urlTypes: {[type in AniList.MediaListType]: string} = {
+    const urlTypes: {[type in AniList.MediaType]: string} = {
         'ANIME': 'animelist',
         'MANGA': 'mangalist'
     };

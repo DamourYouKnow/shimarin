@@ -24,19 +24,20 @@ export interface Viewer extends User {
     }
 }
 
+// TODO: Move this outside of the AniList module.
 export interface View<ViewType> {
     content: ViewType,
     viewer?: Viewer
 }
 
 export interface MediaList {
-    type: MediaListType,
+    type: MediaType,
     status: MediaListStatus
     entries: MediaListItem[]
 }
 
 export interface MediaListFilter {
-    type: MediaListType,
+    type: MediaType,
     status: MediaListStatus
 }
 
@@ -47,14 +48,30 @@ export interface MediaListItem {
 
 export interface Media {
     id: number,
-    title: {
-        english: string | null,
-        romaji: string | null,
-        native: string | null
+    type: MediaType,
+    format: MediaFormat,
+    title: MediaTitle,
+    description: string,
+    coverImage: {
+        medium: string
     },
-    chapters: number | null
-    episodes: number | null
+    chapters: number | null,
+    episodes: number | null,
+    genres: string[],
+    tags: MediaTag[],
+    averageScore: number,
+    siteUrl: string,
     isAdult: boolean
+}
+
+export interface MediaTitle {
+    english: string | null,
+    romaji: string | null,
+    native: string | null
+}
+
+export interface MediaTag {
+    name: string
 }
 
 export interface Page<ContentType> {
@@ -70,12 +87,52 @@ export interface PageInfo {
     hasNextPage: boolean
 }
 
-export type MediaListType = 'ANIME' | 'MANGA';
+export type MediaType = 'ANIME' | 'MANGA';
 
 export type MediaListStatus = 'CURRENT' | 'PLANNING' | 'COMPLETED' | 'DROPPED'
     | 'PAUSED' | 'REPEATING';
 
+export type MediaFormat = 'TV' | 'TV_SHORT' | 'MOVIE' | 'SPECIAL' | 'OVA'
+    | 'ONA' | 'MUSIC' | 'MANGA' | 'NOVEL' | 'ONE_SHOT';
+
+export const mediaFormatLabels: {[format in MediaFormat]: string} = {
+    'TV': 'TV',
+    'TV_SHORT': 'TV Short',
+    'MOVIE': 'Movie',
+    'SPECIAL': 'Special',
+    'OVA': 'OVA',
+    'ONA': 'ONA',
+    'MUSIC': 'Music',
+    'MANGA': 'Manga',
+    'NOVEL': 'Novel',
+    'ONE_SHOT': 'One-shot'
+}
+
 export type TitleLanguage = 'ENGLISH' | 'ROMAJI' | 'NATIVE';
+
+const mediaFields = `
+id
+type
+format
+title {
+    english
+    romaji
+    native
+}
+description(asHtml: false)
+coverImage {
+    medium
+}
+episodes
+chapters
+genres
+tags {
+    name
+}
+averageScore
+siteUrl
+isAdult
+`;
 
 const api = new GraphAPI('https://graphql.anilist.co');
 
@@ -175,6 +232,53 @@ export async function searchUser(
     return response.data.User as User;
 }
 
+interface MediaSearchFilter {
+    type: MediaType
+}
+
+export async function getMediaSearchPage(
+    search: string,
+    filter: MediaSearchFilter,
+    page: number,
+    viewer?: Viewer
+): Promise<View<Page<Media>>> {
+    const response = await api.query(
+        `query (
+            $search: String,
+            $type: MediaType,
+            $page: Int,
+            $perPage: Int
+        ) {
+            Page (page: $page, perPage: $perPage) {
+                pageInfo {
+                    total
+                    currentPage
+                    lastPage
+                    hasNextPage
+                    perPage
+                }
+                media (search: $search, type: $type) {
+                    ${mediaFields}
+                }
+            }
+        }`,
+        {
+            search: search,
+            type: filter.type,
+            page: page,
+            perPage: 10
+        }
+    );
+    const results = response.data.Page?.media;
+    return {
+        content: {
+            items: results as Media[],
+            info: response.data.Page.pageInfo as PageInfo
+        },
+        viewer: viewer
+    };
+}
+
 export async function getMediaListPage(
     userId: number,
     filter: MediaListFilter,
@@ -204,15 +308,7 @@ export async function getMediaListPage(
                     sort: [UPDATED_TIME_DESC]
                 ) {
                     media {
-                        id
-                        title {
-                            english
-                            romaji
-                            native
-                        }
-                        episodes
-                        chapters
-                        isAdult
+                        ${mediaFields}
                     }
                     progress
                 }
@@ -235,4 +331,15 @@ export async function getMediaListPage(
         },
         viewer: viewer
     };
+}
+
+export function mediaDisplayTitle(title: MediaTitle, viewer?: Viewer): string {
+    const titleOrders: {[lang in TitleLanguage]: string[]} = {
+        'ENGLISH': [title.english, title.romaji, title.native],
+        'ROMAJI': [title.romaji, title.english, title.native],
+        'NATIVE': [title.native, title.romaji, title.english]
+    };
+    const titleOrder = viewer ?
+            titleOrders[viewer.options.titleLanguage] : titleOrders['ENGLISH'];
+    return titleOrder.find((title) => title != null) || 'No title';
 }
