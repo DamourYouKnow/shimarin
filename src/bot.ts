@@ -106,7 +106,7 @@ export class Bot {
                     console.error(err);
                     this.sendError(
                         message.channel,
-                        err.message || 'An unexpected has error occurred.'
+                        'An unexpected has error occurred.'
                     );
                 }
             }
