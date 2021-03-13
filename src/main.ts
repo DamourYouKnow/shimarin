@@ -39,31 +39,7 @@ bot.commands.add({
 
     let dmChannel = message.author.dmChannel;
 
-    const usernameRequest = async (): Promise<void> => {
-        await bot.sendEmbed(dmChannel,
-            'Connect your AniList account',
-            'Please enter your AniList username.'
-        );
-        const collector = new Bot.MessageCollector(dmChannel);
-        collector.onReply = async (dm) => {
-            try {
-                const username = dm.content.split(' ')[0] || '';
-                const user = await AniList.searchUser(username);
-                if (user) {
-                    await authCodeRequest(user);
-                } else {
-                    await bot.sendError(
-                        dmChannel,
-                        `No AniList profile for **${username}** was found.`
-                    );
-                }
-            } catch (err) {
-                console.log(err);
-            }
-        };
-    };
-
-    const authCodeRequest = async (user: AniList.User): Promise<void> => {
+    const authCodeRequest = async (): Promise<void> => {
         await bot.sendEmbed(
             dmChannel,
             'Connect your AniList account',
@@ -87,29 +63,23 @@ bot.commands.add({
                     );
                     return;
                 }
-                const success = await AniList.testConnection(user.id, token);
-                if (success) {
-                    await Data.addAccountConnection(
-                        message.author.id,
-                        String(user.id),
-                        token
-                    );
-                    await bot.sendEmbed(
-                        dmChannel,
-                        'Account connected',
-                        `You have successfully connected your AniList account.`
-                    );
-                } else {
-                    await bot.sendError(
-                        dmChannel,
-                        `Your authentication code could not be linked to the `
-                            + `account **${user.name}**. Are you sure the `
-                            + `provided username matches the account you `
-                            + `logged into?`
-                    );
-                }
+                const viewer = await AniList.getViewerFromToken(token);
+                await Data.addAccountConnection(
+                    message.author.id,
+                    String(viewer.id),
+                    token
+                );
+                await bot.sendEmbed(
+                    dmChannel,
+                    'Account connected',
+                    `Connected to AniList account **${viewer.name}**.`
+                );
             } catch (err) {
                 console.log(err);
+                await bot.sendError(
+                    dmChannel,
+                    'I had trouble connecting to your AniList account.'
+                );
             }
         };
     };
@@ -118,7 +88,7 @@ bot.commands.add({
         if (!dmChannel) {
             dmChannel = await message.author.createDM();
         }
-        await usernameRequest();
+        await authCodeRequest();
     } catch {
         await bot.sendError(
             message.channel,

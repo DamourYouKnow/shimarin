@@ -1,6 +1,7 @@
 import fetch from 'node-fetch';
 import { GraphAPI } from './graphql';
 import * as Data from './data';
+import { connect } from 'mongodb';
 
 export const redirectUri = 'https://anilist.co/api/v2/oauth/pin';
 export const oauthUrl = 'https://anilist.co/api/v2/oauth/authorize';
@@ -106,7 +107,7 @@ export const mediaFormatLabels: {[format in MediaFormat]: string} = {
     'MANGA': 'Manga',
     'NOVEL': 'Novel',
     'ONE_SHOT': 'One-shot'
-}
+};
 
 export type TitleLanguage = 'ENGLISH' | 'ROMAJI' | 'NATIVE';
 
@@ -159,32 +160,9 @@ export async function getToken(
     return (await response.json()).access_token;
 }
 
-export async function testConnection(
-    userId: number,
+export async function getViewerFromToken(
     token: string
-): Promise<boolean> {
-    try {
-        const response = await api.query(
-            `query ($userId: Int) {    
-                User(id: $userId) {
-                    id
-                    options {
-                        timezone
-                    }
-                }
-            }`,
-            { userId: userId },
-            token
-        );
-        return Boolean(response.data.User?.options?.timezone);
-    } catch (err) {
-        return false;
-    }
-}
-
-export async function getViewer(discordId: string): Promise<Viewer | null> {
-    const connection = await Data.getAccountConnection(discordId);
-    if (!connection) return null;
+): Promise<Viewer | null> {
     const response = await api.query(
         `
         {
@@ -201,8 +179,16 @@ export async function getViewer(discordId: string): Promise<Viewer | null> {
                 }
             }
         }`,
-    {}, connection.token);
-    return response.data.Viewer as Viewer;
+        {}, token
+    );
+    if (!response.data) return null;
+    return response.data?.Viewer as Viewer;
+}
+
+export async function getViewer(discordId: string): Promise<Viewer | null> {
+    const connection = await Data.getAccountConnection(discordId);
+    if (!connection) return null;
+    return await getViewerFromToken(connection.token);
 }
 
 export async function searchUser(
