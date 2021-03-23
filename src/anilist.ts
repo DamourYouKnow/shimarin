@@ -231,10 +231,12 @@ export async function getMediaSearchPage(
     page: number,
     viewer?: Viewer
 ): Promise<View<Page<Media>>> {
+    const typeQuery = filter.type ? '$type: MediaType,' : '';
+    const typeParam = filter.type ? ', type: $type' : '';
     const response = await api.query(
         `query (
             $search: String,
-            $type: MediaType,
+            ${typeQuery}
             $page: Int,
             $perPage: Int
         ) {
@@ -246,14 +248,14 @@ export async function getMediaSearchPage(
                     hasNextPage
                     perPage
                 }
-                media (search: $search, type: $type) {
+                media (search: $search${typeParam}) {
                     ${mediaFields}
                 }
             }
         }`,
         {
             search: search,
-            type: filter.type,
+            ...(filter.type ? {type: filter.type} : {}),
             page: page,
             perPage: 10
         }

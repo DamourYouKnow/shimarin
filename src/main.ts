@@ -109,6 +109,19 @@ bot.commands.add({
 });
 
 bot.commands.add({
+    name: 'search',
+    help: {
+        shortDesc: 'Search for information about an anime or manga',
+        arguments: {
+            'title': 'Anime or manga title'
+        },
+        examples: [`search yuru camp`]
+    }
+}, async (message) => {
+    await mediaSearch(message);
+});
+
+bot.commands.add({
     name: 'anime',
     help: {
         shortDesc: 'Search for information about an anime',
@@ -204,7 +217,7 @@ bot.commands.add({
     await postMediaList(message, username, filter);
 });
 
-async function mediaSearch(message: Discord.Message, type: AniList.MediaType) {
+async function mediaSearch(message: Discord.Message, type?: AniList.MediaType) {
     const search = message.content.split(' ').slice(1).join(' ');
     if (!search) {
         await bot.sendError(
