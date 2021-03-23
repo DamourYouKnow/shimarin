@@ -115,50 +115,23 @@ bot.commands.add({
         arguments: {
             'title': 'Anime title'
         },
-        examples: ['search yuru camp']
+        examples: ['anime yuru camp']
     }
 }, async (message) => {
-    const search = message.content.split(' ').slice(1).join(' ');
-    if (!search) {
-        await bot.sendError(message.channel, 'No anime title was provided.');
-        return;
+    await mediaSearch(message, 'ANIME');
+});
+
+bot.commands.add({
+    name: 'manga',
+    help: {
+        shortDesc: 'Search for information about a manga',
+        arguments: {
+            'title': 'Manga title'
+        },
+        examples: [`manga komi can't communicate`]
     }
-    const viewer = await AniList.getViewer(message.author.id);
-    const mediaSearchView = await AniList.getMediaSearchPage(
-        search,
-        { type: 'ANIME' },
-        0,
-        viewer
-    );
-    const results = mediaSearchView.content.items;
-    if (results.length == 0) {
-        await bot.sendEmbed(
-            message.channel,
-            'No results found',
-            'Double check your search query and try again.'
-        );
-        return;
-    }
-    if (results.length == 1) {
-        await message.channel.send(mediaEmbed({
-            content: results[0],
-            viewer: viewer
-        }));
-        return;
-    }
-    const response = await message.channel.send(mediaSearchEmbed(
-        mediaSearchView
-    ));
-    const collector = new Bot.MessageCollector(message.channel, message.author);
-    collector.onReply = (reply) => {
-        const selected = Number(reply.content);
-        if (!isNaN(selected) && selected >= 1 && selected <= results.length) {
-            response.edit(mediaEmbed({
-                content: results[selected-1],
-                viewer: viewer
-            })).catch(console.error);
-        }
-    };
+}, async (message) => {
+    await mediaSearch(message, 'MANGA');
 });
 
 bot.commands.add({
@@ -230,6 +203,53 @@ bot.commands.add({
 
     await postMediaList(message, username, filter);
 });
+
+async function mediaSearch(message: Discord.Message, type: AniList.MediaType) {
+    const search = message.content.split(' ').slice(1).join(' ');
+    if (!search) {
+        await bot.sendError(
+            message.channel,
+            `No ${type.toLowerCase()} title was provided.`
+        );
+        return;
+    }
+    const viewer = await AniList.getViewer(message.author.id);
+    const mediaSearchView = await AniList.getMediaSearchPage(
+        search,
+        { type: type },
+        0,
+        viewer
+    );
+    const results = mediaSearchView.content.items;
+    if (results.length == 0) {
+        await bot.sendEmbed(
+            message.channel,
+            'No results found',
+            'Double check your search query and try again.'
+        );
+        return;
+    }
+    if (results.length == 1) {
+        await message.channel.send(mediaEmbed({
+            content: results[0],
+            viewer: viewer
+        }));
+        return;
+    }
+    const response = await message.channel.send(mediaSearchEmbed(
+        mediaSearchView
+    ));
+    const collector = new Bot.MessageCollector(message.channel, message.author);
+    collector.onReply = (reply) => {
+        const selected = Number(reply.content);
+        if (!isNaN(selected) && selected >= 1 && selected <= results.length) {
+            response.edit(mediaEmbed({
+                content: results[selected-1],
+                viewer: viewer
+            })).catch(console.error);
+        }
+    };
+}
 
 async function postMediaList(
     message: Discord.Message,

@@ -1,7 +1,6 @@
 import fetch from 'node-fetch';
 import { GraphAPI } from './graphql';
 import * as Data from './data';
-import { connect } from 'mongodb';
 
 export const redirectUri = 'https://anilist.co/api/v2/oauth/pin';
 export const oauthUrl = 'https://anilist.co/api/v2/oauth/authorize';
@@ -186,9 +185,13 @@ export async function getViewerFromToken(
 }
 
 export async function getViewer(discordId: string): Promise<Viewer | null> {
-    const connection = await Data.getAccountConnection(discordId);
-    if (!connection) return null;
+    try {
+        const connection = await Data.getAccountConnection(discordId);
+        if (!connection) return null;
     return await getViewerFromToken(connection.token);
+    } catch {
+        return null;
+    }
 }
 
 export async function searchUser(
