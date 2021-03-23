@@ -1,6 +1,4 @@
 import * as Discord from 'discord.js';
-import { type } from 'node:os';
-import { getConfigFileParsingDiagnostics } from 'typescript';
 import * as AniList from './anilist';
 import * as Bot from './bot';
 import * as Data from './data';
@@ -148,40 +146,6 @@ bot.commands.add({
 });
 
 bot.commands.add({
-    name: 'watching',
-    help: {
-        shortDesc: `Gets the list of anime that a AniList user is currently 
-            watching.`,
-        arguments: {
-            'username': 'AniList username.'
-        },
-        examples: ['watching DamourYouKnow']
-    }
-}, async (message, username) => {
-    await postMediaList(message, username, {
-        type: 'ANIME',
-        status: 'CURRENT'
-    });
-});
-
-bot.commands.add({
-    name: 'reading',
-    help: {
-        shortDesc: `Gets the list of manga that a AniList user is currently 
-            reading.`,
-        arguments: {
-            'username': 'AniList username.'
-        },
-        examples: ['reading DamourYouKnow']
-    }
-}, async (message, username) => {
-    await postMediaList(message, username, {
-        type: 'MANGA',
-        status: 'CURRENT'
-    });
-});
-
-bot.commands.add({
     name: 'anilist',
     aliases: ['list'],
     help: {
@@ -215,6 +179,40 @@ bot.commands.add({
     if (argSet.has('planned')) filter.status = 'PLANNING';
 
     await postMediaList(message, username, filter);
+});
+
+bot.commands.add({
+    name: 'watching',
+    help: {
+        shortDesc: `Gets the list of anime that a AniList user is currently 
+            watching.`,
+        arguments: {
+            'username': 'AniList username.'
+        },
+        examples: ['watching DamourYouKnow']
+    }
+}, async (message, username) => {
+    await postMediaList(message, username, {
+        type: 'ANIME',
+        status: 'CURRENT'
+    });
+});
+
+bot.commands.add({
+    name: 'reading',
+    help: {
+        shortDesc: `Gets the list of manga that a AniList user is currently 
+            reading.`,
+        arguments: {
+            'username': 'AniList username.'
+        },
+        examples: ['reading DamourYouKnow']
+    }
+}, async (message, username) => {
+    await postMediaList(message, username, {
+        type: 'MANGA',
+        status: 'CURRENT'
+    });
 });
 
 async function mediaSearch(message: Discord.Message, type?: AniList.MediaType) {
