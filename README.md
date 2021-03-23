@@ -1,14 +1,17 @@
-# Discord bot template
+# shimarin
 
-This repository contains boilerplate code for creating a Discord bot. This 
-boilerplate contains a pattern used to define commands, aliases, and 
-command arguments.
+Cone-nichiwa! Shimarin is a Discord bot that integrates with the 
+[AniList](https://anilist.co/) platform
 
-### Setup
-1. Install [Node.js](https://nodejs.org/en/)
+## Features
+- Search for information about anime and manga.
+- View anime and manga lists of AniList users.
+- Connect to your AniList account to tailor how content is displayed to your 
+preferences.
+- (In progress) Receive updates related to anime you are currently watching.
 
-2. Install dependencies with `npm install`.
+All of the features are documented through the `>help` command.
 
-3. Set `DISCORD_API_TOKEN` environment variable or add token to `config.yml`.
+If you are a developer interested in contributing then check out the setup 
+instructions [here](./SETUP.md).
 
-3. Run with `npm start`
