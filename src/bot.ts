@@ -88,7 +88,7 @@ export class Bot {
                 return arg.toLowerCase();
             });
             try {
-                command.handler.apply(null, [message, ...args]);
+                await command.handler.apply(null, [message, ...args]);
             } catch (err) {
                 console.error(err);
                 this.sendError(

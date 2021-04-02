@@ -74,6 +74,12 @@ export interface MediaTag {
     name: string
 }
 
+export interface Notification {
+    media: Media,
+    episode: number,
+    createdAt: number
+}
+
 export interface Page<ContentType> {
     items: ContentType[],
     info: PageInfo
@@ -321,6 +327,59 @@ export async function getMediaListPage(
             info: response.data.Page.pageInfo as PageInfo
         },
         viewer: viewer
+    };
+}
+
+export async function getNotifiations(
+    token: string,
+    page: number,
+): Promise<View<Page<Notification>> | null> {
+    const response = await api.query(
+        `query (
+            $type: NotificationType,
+            $page: Int,
+            $perPage: Int
+        ) {
+            Page (page: $page, perPage: $perPage) {
+                pageInfo {
+                    total
+                    currentPage
+                    lastPage
+                    hasNextPage
+                    perPage
+                }
+                notifications (
+                    type: $type,
+                ) {
+                    ... on AiringNotification {
+                        media {
+                            title {
+                                english
+                                romaji
+                                native
+                            }
+                        }
+                        createdAt
+                        episode
+                    }
+                }
+            }
+        }`,
+        {
+            type: 'AIRING',
+            page: page,
+            perPage: 10
+        },
+        token
+    );
+    const results = response.data.Page?.notifications;
+    if (!results) return null;
+    return {
+        content: {
+            items: results as Notification[],
+            info: response.data.Page.pageInfo as PageInfo
+        },
+        
     };
 }
 
