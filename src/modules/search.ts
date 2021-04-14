@@ -113,7 +113,8 @@ function mediaEmbed(
         description: media.description
             .replace(/(<br>)+/g, '\n\n')
             .replace(/(\n\n)+/g, '\n\n')
-            .replace(/<i>/g, '*').replace(/<\/i>/g, '*'),
+            .replace(/<i>/g, '*').replace(/<\/i>/g, '*')
+            .replace(/<b>/g, '**').replace(/<\/b>/g, '**'),
         fields: [
             {
                 name: 'Format',
