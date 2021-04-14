@@ -124,6 +124,11 @@ function mediaEmbed(
                 value: AniList.mediaFormatLabels[media.format],
                 inline: true
             },
+            {
+                name: 'Status',
+                value: AniList.mediaStatusLabels[media.type][media.status],
+                inline: true
+            },
             ...media.averageScore != null ? [{
                 name: 'Average score',
                 value: `${(media.averageScore / 10).toFixed(1)} / 10`,

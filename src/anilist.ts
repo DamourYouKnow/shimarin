@@ -50,6 +50,7 @@ export interface Media {
     id: number,
     type: MediaType,
     format: MediaFormat,
+    status: MediaStatus,
     title: MediaTitle,
     description: string,
     coverImage: {
@@ -95,6 +96,9 @@ export interface PageInfo {
 
 export type MediaType = 'ANIME' | 'MANGA';
 
+export type MediaStatus = 'FINISHED' | 'RELEASING' | 'NOT_YET_RELEASED'
+    | 'CANCELLED' | 'HIATUS';
+
 export type MediaListStatus = 'CURRENT' | 'PLANNING' | 'COMPLETED' | 'DROPPED'
     | 'PAUSED' | 'REPEATING';
 
@@ -114,12 +118,34 @@ export const mediaFormatLabels: {[format in MediaFormat]: string} = {
     'ONE_SHOT': 'One-shot'
 };
 
+export const mediaStatusLabels: {
+    [type in MediaType]: {
+        [status in MediaStatus]: string
+    }
+} = {
+    'ANIME': {
+        'FINISHED': 'Finished',
+        'CANCELLED': 'Cancelled',
+        'HIATUS': 'Hiatus',
+        'NOT_YET_RELEASED': 'Unreleased',
+        'RELEASING': 'Airing'
+    },
+    'MANGA': {
+        'FINISHED': 'Finished',
+        'CANCELLED': 'Cancelled',
+        'HIATUS': 'Hiatus',
+        'NOT_YET_RELEASED': 'Unreleased',
+        'RELEASING': 'Releasing'
+    }
+};
+
 export type TitleLanguage = 'ENGLISH' | 'ROMAJI' | 'NATIVE';
 
 const mediaFields = `
 id
 type
 format
+status
 title {
     english
     romaji
