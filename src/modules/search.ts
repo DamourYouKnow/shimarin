@@ -145,8 +145,10 @@ function mediaSearchEmbed(
     const mediaList = mediaSearchView.content;
     const viewer = mediaSearchView.viewer;
     const fields = mediaList.items.map((media, i) => {
+        let title = AniList.mediaDisplayTitle(media.title, viewer);
+        if (media.isAdult) title += ' (NSFW)';
         return {
-            name: `${i+1}. ${AniList.mediaDisplayTitle(media.title, viewer)}`,
+            name: `${i+1}. ${title}`,
             value: AniList.mediaFormatLabels[media.format] || 'No format'
         };
     });
