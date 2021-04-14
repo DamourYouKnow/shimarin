@@ -121,11 +121,11 @@ function mediaEmbed(
                 value: AniList.mediaFormatLabels[media.format],
                 inline: true
             },
-            {
+            ...media.averageScore != null ? [{
                 name: 'Average score',
                 value: `${(media.averageScore / 10).toFixed(1)} / 10`,
                 inline: true
-            },
+            }]: [],
             {
                 name: 'Genres',
                 value: media.genres.join(', ') || 'None',
