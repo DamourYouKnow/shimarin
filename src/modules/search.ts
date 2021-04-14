@@ -1,4 +1,5 @@
 import * as Discord from 'discord.js';
+import { decode } from 'html-entities';
 import { Bot, Module, MessageCollector, MessageEmbed } from '../bot';
 import * as AniList from '../anilist';
 
@@ -110,11 +111,13 @@ function mediaEmbed(
         thumbnail: {
             url: media.coverImage.medium,
         },
-        description: media.description
-            .replace(/(<br>)+/g, '\n\n')
-            .replace(/(\n\n)+/g, '\n\n')
-            .replace(/<i>/g, '*').replace(/<\/i>/g, '*')
-            .replace(/<b>/g, '**').replace(/<\/b>/g, '**'),
+        description: decode(
+            media.description
+                .replace(/(<br>)+/g, '\n\n')
+                .replace(/(\n\n)+/g, '\n\n')
+                .replace(/<i>/g, '*').replace(/<\/i>/g, '*')
+                .replace(/<b>/g, '**').replace(/<\/b>/g, '**')
+        ),
         fields: [
             {
                 name: 'Format',
