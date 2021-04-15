@@ -174,7 +174,7 @@ function mediaEmbed(
         thumbnail: {
             url: media.coverImage.medium,
         },
-        description: markdown(media.description),
+        description: cleanDescription(media.description, media.siteUrl),
         fields: [
             {
                 name: 'Format',
@@ -277,23 +277,13 @@ function characterEmbed(
         });
     }
 
-    const descLimit = 1800;
-    let description = markdown(character.description);
-    if (description.length > descLimit) {
-        description = description.slice(0, descLimit);
-        const spoilerTags = description.match(/\|\|/g).length;
-        if (spoilerTags % 2 != 0) description += '||';
-        const readMore = `[Read more](${character.siteUrl})`;
-        description += `...\n[${readMore}]`;
-    }
-
     return new MessageEmbed({
         title: character.name.full,
         url: character.siteUrl,
         thumbnail: {
             url: character.image.medium,
         },
-        description: description,
+        description: cleanDescription(character.description, character.siteUrl),
         fields: fields
     }, bot);
 }
@@ -321,11 +311,21 @@ function characterSearchEmbed(
     }, bot);
 }
 
-function markdown(text: string): string {
-    return decode(text)
+function cleanDescription(text: string, sourceUrl: string): string {
+    let description = decode(text)
         .replace(/(<br>)+/g, '\n\n')
         .replace(/(\n\n)+/g, '\n\n')
         .replace(/<i>/g, '*').replace(/<\/i>/g, '*')
         .replace(/<b>/g, '**').replace(/<\/b>/g, '**')
         .replace(/~!/g, '||').replace(/!~/g, '||');
+
+    const descLimit = 1800;
+    if (description.length > descLimit) {
+        description = description.slice(0, descLimit);
+        const spoilerTags = description.match(/\|\|/g);
+        if (spoilerTags && spoilerTags.length % 2 != 0) description += '||';
+        const readMore = `[Read more](${sourceUrl})`;
+        description += `...\n\n[${readMore}]`;
+    }
+    return description;
 }
