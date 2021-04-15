@@ -172,7 +172,7 @@ function mediaEmbed(
         title: AniList.mediaDisplayTitle(media.title),
         url: media.siteUrl,
         thumbnail: {
-            url: media.coverImage.medium,
+            url: media.coverImage.large,
         },
         description: cleanDescription(media.description, media.siteUrl),
         fields: [
@@ -281,7 +281,7 @@ function characterEmbed(
         title: character.name.full,
         url: character.siteUrl,
         thumbnail: {
-            url: character.image.medium,
+            url: character.image.large,
         },
         description: cleanDescription(character.description, character.siteUrl),
         fields: fields

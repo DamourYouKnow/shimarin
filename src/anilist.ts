@@ -55,6 +55,7 @@ export interface Media {
     description: string,
     coverImage: {
         medium: string
+        large: string
     },
     chapters: number | null,
     episodes: number | null,
@@ -182,6 +183,7 @@ title {
 description(asHtml: false)
 coverImage {
     medium
+    large
 }
 episodes
 chapters
