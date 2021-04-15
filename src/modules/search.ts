@@ -277,13 +277,23 @@ function characterEmbed(
         });
     }
 
+    const descLimit = 1800;
+    let description = markdown(character.description);
+    if (description.length > descLimit) {
+        description = description.slice(0, descLimit);
+        const spoilerTags = description.match(/\|\|/g).length;
+        if (spoilerTags % 2 != 0) description += '||';
+        const readMore = `[Read more](${character.siteUrl})`;
+        description += `...\n[${readMore}]`;
+    }
+
     return new MessageEmbed({
         title: character.name.full,
         url: character.siteUrl,
         thumbnail: {
             url: character.image.medium,
         },
-        description: markdown(character.description),
+        description: description,
         fields: fields
     }, bot);
 }
