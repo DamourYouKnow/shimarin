@@ -81,6 +81,34 @@ export interface Notification {
     createdAt: number
 }
 
+export interface Character {
+    name: CharacterName,
+    image: {
+        large: string,
+        medium: string
+    }
+    description: string,
+    gender: string,
+    dateOfBirth: {
+        year: number,
+        month: number,
+        day: number
+    },
+    age: string
+    siteUrl: string,
+    media: Media[]
+}
+
+export interface CharacterName {
+    first: string,
+    middle: string,
+    last: string,
+    full: string,
+    native: string,
+    alternative: string[],
+    alternativeSpoiler: string[]
+}
+
 export interface Page<ContentType> {
     items: ContentType[],
     info: PageInfo
@@ -255,6 +283,76 @@ export async function searchUser(
 
 interface MediaSearchFilter {
     type: MediaType
+}
+
+export async function getCharacterSearchPage(
+    search: string,
+    page: number,
+    viewer?: Viewer
+): Promise<View<Page<Character>>> {
+    const response = await api.query(
+        `query (
+            $search: String,
+            $page: Int,
+            $perPage: Int
+        ) {
+            Page (page: $page, perPage: $perPage) {
+                pageInfo {
+                    total
+                    currentPage
+                    lastPage
+                    hasNextPage
+                    perPage
+                }
+                characters (search: $search) {
+                    name {
+                        first
+                        middle
+                        last
+                        full
+                        native
+                        alternative
+                        alternativeSpoiler
+                    }
+                    image {
+                        large
+                        medium
+                    }
+                    description
+                    gender
+                    dateOfBirth {
+                        year
+                        month
+                        day
+                    }
+                    age
+                    siteUrl
+                    media (sort: POPULARITY_DESC) {
+                        nodes {
+                            ${mediaFields}
+                        }
+                    }
+                }
+            }
+        }`,
+        {
+            search: search,
+            page: page,
+            perPage: 10
+        }
+    );
+    const results = response.data.Page?.characters;
+    const charactersPage = {
+        content: {
+            items: results as Character[],
+            info: response.data.Page.pageInfo as PageInfo
+        },
+        viewer: viewer
+    };
+    charactersPage.content.items.forEach((character: any) => {
+        character.media = character.media.nodes;
+    });
+    return charactersPage;
 }
 
 export async function getMediaSearchPage(
