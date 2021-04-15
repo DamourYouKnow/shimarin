@@ -174,13 +174,7 @@ function mediaEmbed(
         thumbnail: {
             url: media.coverImage.medium,
         },
-        description: decode(
-            media.description
-                .replace(/(<br>)+/g, '\n\n')
-                .replace(/(\n\n)+/g, '\n\n')
-                .replace(/<i>/g, '*').replace(/<\/i>/g, '*')
-                .replace(/<b>/g, '**').replace(/<\/b>/g, '**')
-        ),
+        description: markdown(media.description),
         fields: [
             {
                 name: 'Format',
@@ -289,13 +283,7 @@ function characterEmbed(
         thumbnail: {
             url: character.image.medium,
         },
-        description: decode(
-            character.description
-                .replace(/(<br>)+/g, '\n\n')
-                .replace(/(\n\n)+/g, '\n\n')
-                .replace(/<i>/g, '*').replace(/<\/i>/g, '*')
-                .replace(/<b>/g, '**').replace(/<\/b>/g, '**')
-        ),
+        description: markdown(character.description),
         fields: fields
     }, bot);
 }
@@ -321,4 +309,13 @@ function characterSearchEmbed(
         description: 'Enter the number of the character you are looking for.',
         fields: fields
     }, bot);
+}
+
+function markdown(text: string): string {
+    return decode(text)
+        .replace(/(<br>)+/g, '\n\n')
+        .replace(/(\n\n)+/g, '\n\n')
+        .replace(/<i>/g, '*').replace(/<\/i>/g, '*')
+        .replace(/<b>/g, '**').replace(/<\/b>/g, '**')
+        .replace(/~!/g, '||').replace(/!~/g, '||');
 }
