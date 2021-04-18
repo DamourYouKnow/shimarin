@@ -17,7 +17,20 @@ export default class extends Module {
                 examples: [`search yuru camp`]
             }
         }, async (message) => {
-            await mediaSearch(bot, message);
+            await search<AniList.Media>(
+                bot,
+                message,
+                async (search, viewer) => {
+                    return await AniList.getMediaSearchPage(
+                        search,
+                        { type: null },
+                        0,
+                        viewer
+                    );
+                },
+                mediaSearchEmbed,
+                mediaEmbed
+            );
         });
     
         this.addCommand({
@@ -30,7 +43,20 @@ export default class extends Module {
                 examples: ['anime yuru camp']
             }
         }, async (message) => {
-            await mediaSearch(bot, message, 'ANIME');
+            await search<AniList.Media>(
+                bot,
+                message,
+                async (search, viewer) => {
+                    return await AniList.getMediaSearchPage(
+                        search,
+                        { type: 'ANIME' },
+                        0,
+                        viewer
+                    );
+                },
+                mediaSearchEmbed,
+                mediaEmbed
+            );
         });
         
         this.addCommand({
@@ -43,7 +69,20 @@ export default class extends Module {
                 examples: [`manga komi can't communicate`]
             }
         }, async (message) => {
-            await mediaSearch(bot, message, 'MANGA');
+            await search<AniList.Media>(
+                bot,
+                message,
+                async (search, viewer) => {
+                    return await AniList.getMediaSearchPage(
+                        search,
+                        { type: 'MANGA' },
+                        0,
+                        viewer
+                    );
+                },
+                mediaSearchEmbed,
+                mediaEmbed
+            );
         });
 
         this.addCommand({
@@ -56,32 +95,47 @@ export default class extends Module {
                 examples: ['character shimarin']
             }
         }, async (message) => {
-            await characterSearch(bot, message);
+            await search<AniList.Character>(
+                bot,
+                message,
+                async (search, viewer) => {
+                    return await AniList.getCharacterSearchPage(
+                        search,
+                        0,
+                        viewer
+                    );
+                },
+                characterSearchEmbed,
+                characterEmbed
+            );
         });
     }
 }
 
-async function mediaSearch(
+async function search<T>(
     bot: Bot,
     message: Discord.Message,
-    type?: AniList.MediaType
+    getResults: (
+        search: string, viewer: AniList.Viewer
+    ) => Promise<AniList.View<AniList.Page<T>>>,
+    createResultsEmbed: (
+        bot: Bot, results: AniList.View<AniList.Page<T>>
+    ) => Discord.MessageEmbed,
+    createEmbed: (
+        bot: Bot, view: AniList.View<T>
+    ) => Discord.MessageEmbed,
 ) {
     const search = message.content.split(' ').slice(1).join(' ');
     if (!search) {
         await bot.sendError(
             message.channel,
-            `No ${type.toLowerCase()} title was provided.`
+            'No search query was provided.'
         );
         return;
     }
     const viewer = await AniList.getViewer(message.author.id);
-    const mediaSearchView = await AniList.getMediaSearchPage(
-        search,
-        { type: type },
-        0,
-        viewer
-    );
-    const results = mediaSearchView.content.items;
+    const resultsView = await getResults(search, viewer);
+    const results = resultsView.content.items;
     if (results.length == 0) {
         await bot.sendEmbed(
             message.channel,
@@ -91,74 +145,25 @@ async function mediaSearch(
         return;
     }
     if (results.length == 1) {
-        await message.channel.send(mediaEmbed(bot, {
+        await message.channel.send(createEmbed(bot, {
             content: results[0],
             viewer: viewer
         }));
         return;
     }
-    const response = await message.channel.send(mediaSearchEmbed(
-        bot,
-        mediaSearchView
-    ));
-    const collector = new MessageCollector(message.channel, message.author);
-    collector.onReply = (reply) => {
-        const selected = Number(reply.content);
-        if (!isNaN(selected) && selected >= 1 && selected <= results.length) {
-            response.edit(mediaEmbed(bot, {
-                content: results[selected-1],
-                viewer: viewer
-            })).catch(console.error);
-        }
-    };
-}
 
-async function characterSearch(
-    bot: Bot,
-    message: Discord.Message,
-) {
-    const search = message.content.split(' ').slice(1).join(' ');
-    if (!search) {
-        await bot.sendError(
-            message.channel,
-            `No character name was provided.`
-        );
-        return;
-    }
-    const viewer = await AniList.getViewer(message.author.id);
-    const characterSearchView = await AniList.getCharacterSearchPage(
-        search,
-        0,
-        viewer
+    const response = await message.channel.send(
+        createResultsEmbed(bot, resultsView)
     );
-    const results = characterSearchView.content.items;
-    if (results.length == 0) {
-        await bot.sendEmbed(
-            message.channel,
-            'No results found',
-            'Double check your search query and try again.'
-        );
-        return;
-    }
-    if (results.length == 1) {
-        await message.channel.send(characterEmbed(bot, {
-            content: results[0],
-            viewer: viewer
-        }));
-        return;
-    }
-    const response = await message.channel.send(characterSearchEmbed(
-        bot,
-        characterSearchView
-    ));
+
     const collector = new MessageCollector(message.channel, message.author);
     collector.onReply = (reply) => {
         const selected = Number(reply.content);
         if (!isNaN(selected) && selected >= 1 && selected <= results.length) {
-            response.edit(characterEmbed(bot, {
+            response.edit(createEmbed(bot, {
                 content: results[selected-1],
                 viewer: viewer
-            })).catch(console.error);
+            }));
         }
     };
 }
