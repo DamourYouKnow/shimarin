@@ -224,24 +224,21 @@ function mediaEmbed(
             }
         ]
     }, bot);
-} 
+}
 
-function mediaSearchEmbed(
+function searchResultsEmbed<T>(
     bot: Bot,
-    mediaSearchView: AniList.View<AniList.Page<AniList.Media>>
-): Discord.MessageEmbed {
-    const mediaList = mediaSearchView.content;
-    const viewer = mediaSearchView.viewer;
-    const pageInfo = mediaSearchView.content.info;
+    resultsView: AniList.View<AniList.Page<T>>,
+    items: {name: string, description: string}[]
+) {
+    const pageInfo = resultsView.content.info;
     const pageStr = `Page ${pageInfo.currentPage} / ${pageInfo.lastPage}`;
-    const descStr = 'Enter the number of the content you are looking for.';
-    const fields = mediaList.items.map((media, i) => {
-        let title = AniList.mediaDisplayTitle(media.title, viewer);
-        if (media.isAdult) title += ' (NSFW)';
+    const descStr = 'Enter the number of the item you are looking for:';
+    const fields = items.map((item, i) => {
         const pageStartIndex = (pageInfo.currentPage - 1) * pageInfo.perPage;
         return {
-            name: `${i + 1 + pageStartIndex}. ${title}`,
-            value: AniList.mediaFormatLabels[media.format] || 'No format'
+            name: `${i + 1 + pageStartIndex}. ${item.name}`,
+            value: item.description
         };
     });
     return new MessageEmbed({
@@ -249,6 +246,23 @@ function mediaSearchEmbed(
         description: `${pageStr}\n\n${descStr}`,
         fields: fields
     }, bot);
+}
+
+function mediaSearchEmbed(
+    bot: Bot,
+    mediaSearchView: AniList.View<AniList.Page<AniList.Media>>
+): Discord.MessageEmbed {
+    const mediaList = mediaSearchView.content;
+    const viewer = mediaSearchView.viewer;
+    const items = mediaList.items.map((media) => {
+        let title = AniList.mediaDisplayTitle(media.title, viewer);
+        if (media.isAdult) title += ' (NSFW)';
+        return {
+            name:title,
+            description: AniList.mediaFormatLabels[media.format] || 'No format'
+        };
+    });
+    return searchResultsEmbed(bot, mediaSearchView, items);
 }
 
 function characterEmbed(
@@ -324,25 +338,17 @@ function characterSearchEmbed(
 ) {
     const characters = characterSearchView.content.items;
     const viewer = characterSearchView.viewer;
-    const pageInfo = characterSearchView.content.info;
-    const pageStr = `Page ${pageInfo.currentPage} / ${pageInfo.lastPage}`;
-    const descStr = 'Enter the number of the character you are looking for.';
-    const fields = characters.map((character, i) => {
+    const items = characters.map((character) => {
         let name = character.name.full;
         if (character.media.some((media) => media.isAdult)) name += ' (NSFW)';
-        const pageStartIndex = (pageInfo.currentPage - 1) * pageInfo.perPage;
         return {
-            name: `${i + 1 + pageStartIndex}. ${name}`,
-            value: character.media.length > 0 ?
+            name: name,
+            description: character.media.length > 0 ?
                 AniList.mediaDisplayTitle(character.media[0].title, viewer) :
                 'Unknown source'
         };
     });
-    return new MessageEmbed({
-        title: 'Search results',
-        description: `${pageStr}\n\n${descStr}`,
-        fields: fields
-    }, bot);
+    return searchResultsEmbed(bot, characterSearchView, items);
 }
 
 function cleanDescription(text: string, sourceUrl: string): string {
