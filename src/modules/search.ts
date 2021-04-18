@@ -160,7 +160,7 @@ async function search<T>(
     const response = await message.channel.send(
         createResultsEmbed(bot, resultsView)
     );
-    await new EmbedNavigator(
+    const navigator = new EmbedNavigator(
         response,
         message.author,
         resultsView.content.info,
@@ -171,10 +171,12 @@ async function search<T>(
                 resultsView
             ));
         }
-    ).listen();
+    );
+    await navigator.listen();
 
     const collector = new MessageCollector(message.channel, message.author);
     collector.onReply = (reply) => {
+        navigator.stop();
         const results = resultsView.content.items;
         let selected = Number(reply.content);
         selected = selected % resultsView.content.info.perPage;

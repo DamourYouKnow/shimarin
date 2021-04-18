@@ -178,6 +178,7 @@ export class EmbedNavigator {
     pageInfo: PageInfo;
     updating: boolean;
     handlePage: (page: number) => Promise<void>;
+    collector: Discord.ReactionCollector;
 
     constructor(
         message: Discord.Message,
@@ -196,7 +197,7 @@ export class EmbedNavigator {
         const previousBtn = await this.message.react('⬅️');
         const nextBtn = await this.message.react('➡️');
         const filter: Discord.CollectorFilter = () => true;
-        const collector = this.message.createReactionCollector(filter, {
+        this.collector = this.message.createReactionCollector(filter, {
             dispose: true,
             time: 1000 * 60 * 15
         });
@@ -211,9 +212,9 @@ export class EmbedNavigator {
             if (reaction == previousBtn) this.previous();
         };
 
-        collector.on('collect', handleReaction);
-        collector.on('remove', handleReaction);
-        collector.on('end', async () => {
+        this.collector.on('collect', handleReaction);
+        this.collector.on('remove', handleReaction);
+        this.collector.on('end', async () => {
             try {
                 await nextBtn.remove();
                 await previousBtn.remove();
@@ -241,6 +242,10 @@ export class EmbedNavigator {
             await this.handlePage(this.pageInfo.currentPage);
             this.updating = false;
         }
+    }
+
+    stop() {
+        this.collector.stop();
     }
 }
 
