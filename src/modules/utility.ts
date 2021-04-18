@@ -37,17 +37,6 @@ export default class extends Module {
                 }, bot));
             }
         });
-
-        this.addCommand({
-            name: 'ping',
-            help: {
-                shortDesc: 'Replies with pong!',
-                longDesc: 'This command is implemented for developer testing.',
-                examples: ['ping']
-            }
-        }, async (message) => {
-            await message.channel.send('pong!');
-        });
         
         this.addCommand({
             name: 'connect',
