@@ -177,19 +177,19 @@ export class EmbedNavigator {
     navigatingUser: Discord.User;
     pageInfo: PageInfo;
     updating: boolean;
-    generatePage: (page: number) => Promise<Discord.MessageEmbed>;
+    handlePage: (page: number) => Promise<void>;
 
     constructor(
         message: Discord.Message,
         navigatingUser: Discord.User,
         pageInfo: PageInfo,
-        generatePage: (page: number) => Promise<Discord.MessageEmbed>
+        handlePage: (page: number) => Promise<void>
     ) {
         this.message = message;
         this.navigatingUser = navigatingUser;
         this.pageInfo = pageInfo;
         this.updating = true;
-        this.generatePage = generatePage;
+        this.handlePage = handlePage;
     }
 
     async listen(): Promise<void> {
@@ -225,22 +225,20 @@ export class EmbedNavigator {
         this.updating = false;
     }
 
-    async next() {
+    async next(): Promise<void> {
         if (this.pageInfo.currentPage < this.pageInfo.lastPage) {
             this.pageInfo.currentPage += 1;
             this.updating = true;
-            const embed = await this.generatePage(this.pageInfo.currentPage);
-            await this.message.edit(embed);
+            await this.handlePage(this.pageInfo.currentPage);
             this.updating = false;
         }
     }
 
-    async previous() {
+    async previous(): Promise<void> {
         if (this.pageInfo.currentPage > 0) {
             this.pageInfo.currentPage -= 1;
             this.updating = true;
-            const embed = await this.generatePage(this.pageInfo.currentPage);
-            await this.message.edit(embed);
+            await this.handlePage(this.pageInfo.currentPage);
             this.updating = false;
         }
     }

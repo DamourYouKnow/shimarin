@@ -1,6 +1,12 @@
 import * as Discord from 'discord.js';
 import { decode } from 'html-entities';
-import { Bot, Module, MessageCollector, MessageEmbed } from '../bot';
+import {
+    Bot,
+    Module,
+    MessageCollector,
+    MessageEmbed,
+    EmbedNavigator 
+} from '../bot';
 import * as AniList from '../anilist';
 
 export default class extends Module {
@@ -20,11 +26,11 @@ export default class extends Module {
             await search<AniList.Media>(
                 bot,
                 message,
-                async (search, viewer) => {
+                async (search, page, viewer) => {
                     return await AniList.getMediaSearchPage(
                         search,
                         { type: null },
-                        0,
+                        page,
                         viewer
                     );
                 },
@@ -46,11 +52,11 @@ export default class extends Module {
             await search<AniList.Media>(
                 bot,
                 message,
-                async (search, viewer) => {
+                async (search, page, viewer) => {
                     return await AniList.getMediaSearchPage(
                         search,
                         { type: 'ANIME' },
-                        0,
+                        page,
                         viewer
                     );
                 },
@@ -72,11 +78,11 @@ export default class extends Module {
             await search<AniList.Media>(
                 bot,
                 message,
-                async (search, viewer) => {
+                async (search, page, viewer) => {
                     return await AniList.getMediaSearchPage(
                         search,
                         { type: 'MANGA' },
-                        0,
+                        page,
                         viewer
                     );
                 },
@@ -98,10 +104,10 @@ export default class extends Module {
             await search<AniList.Character>(
                 bot,
                 message,
-                async (search, viewer) => {
+                async (search, page, viewer) => {
                     return await AniList.getCharacterSearchPage(
                         search,
-                        0,
+                        page,
                         viewer
                     );
                 },
@@ -116,7 +122,7 @@ async function search<T>(
     bot: Bot,
     message: Discord.Message,
     getResults: (
-        search: string, viewer: AniList.Viewer
+        search: string, page: number, viewer: AniList.Viewer
     ) => Promise<AniList.View<AniList.Page<T>>>,
     createResultsEmbed: (
         bot: Bot, results: AniList.View<AniList.Page<T>>
@@ -134,9 +140,8 @@ async function search<T>(
         return;
     }
     const viewer = await AniList.getViewer(message.author.id);
-    const resultsView = await getResults(search, viewer);
-    const results = resultsView.content.items;
-    if (results.length == 0) {
+    let resultsView = await getResults(search, 0, viewer);
+    if (resultsView.content.items.length == 0) {
         await bot.sendEmbed(
             message.channel,
             'No results found',
@@ -144,9 +149,9 @@ async function search<T>(
         );
         return;
     }
-    if (results.length == 1) {
+    if (resultsView.content.items.length == 1) {
         await message.channel.send(createEmbed(bot, {
-            content: results[0],
+            content: resultsView.content.items[0],
             viewer: viewer
         }));
         return;
@@ -155,13 +160,27 @@ async function search<T>(
     const response = await message.channel.send(
         createResultsEmbed(bot, resultsView)
     );
+    await new EmbedNavigator(
+        response,
+        message.author,
+        resultsView.content.info,
+        async (page) => {
+            resultsView = await getResults(search, page, viewer);
+            response.edit(createResultsEmbed(
+                bot,
+                resultsView
+            ));
+        }
+    ).listen();
 
     const collector = new MessageCollector(message.channel, message.author);
     collector.onReply = (reply) => {
-        const selected = Number(reply.content);
+        const results = resultsView.content.items;
+        let selected = Number(reply.content);
+        selected = selected % resultsView.content.info.perPage;
         if (!isNaN(selected) && selected >= 1 && selected <= results.length) {
             response.edit(createEmbed(bot, {
-                content: results[selected-1],
+                content: results[selected - 1],
                 viewer: viewer
             }));
         }
@@ -211,17 +230,21 @@ function mediaSearchEmbed(
 ): Discord.MessageEmbed {
     const mediaList = mediaSearchView.content;
     const viewer = mediaSearchView.viewer;
+    const pageInfo = mediaSearchView.content.info;
+    const pageStr = `Page ${pageInfo.currentPage} / ${pageInfo.lastPage}`;
+    const descStr = 'Enter the number of the content you are looking for.';
     const fields = mediaList.items.map((media, i) => {
         let title = AniList.mediaDisplayTitle(media.title, viewer);
         if (media.isAdult) title += ' (NSFW)';
+        const pageStartIndex = (pageInfo.currentPage - 1) * pageInfo.perPage;
         return {
-            name: `${i+1}. ${title}`,
+            name: `${i + 1 + pageStartIndex}. ${title}`,
             value: AniList.mediaFormatLabels[media.format] || 'No format'
         };
     });
     return new MessageEmbed({
         title: 'Search results',
-        description: 'Enter the number of the content you are looking for.',
+        description: `${pageStr}\n\n${descStr}`,
         fields: fields
     }, bot);
 }
@@ -299,11 +322,15 @@ function characterSearchEmbed(
 ) {
     const characters = characterSearchView.content.items;
     const viewer = characterSearchView.viewer;
+    const pageInfo = characterSearchView.content.info;
+    const pageStr = `Page ${pageInfo.currentPage} / ${pageInfo.lastPage}`;
+    const descStr = 'Enter the number of the character you are looking for.';
     const fields = characters.map((character, i) => {
         let name = character.name.full;
         if (character.media.some((media) => media.isAdult)) name += ' (NSFW)';
+        const pageStartIndex = (pageInfo.currentPage - 1) * pageInfo.perPage;
         return {
-            name: `${i+1}. ${name}`,
+            name: `${i + 1 + pageStartIndex}. ${name}`,
             value: character.media.length > 0 ?
                 AniList.mediaDisplayTitle(character.media[0].title, viewer) :
                 'Unknown source'
@@ -311,7 +338,7 @@ function characterSearchEmbed(
     });
     return new MessageEmbed({
         title: 'Search results',
-        description: 'Enter the number of the character you are looking for.',
+        description: `${pageStr}\n\n${descStr}`,
         fields: fields
     }, bot);
 }

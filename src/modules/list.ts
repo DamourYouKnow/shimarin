@@ -2,7 +2,6 @@ import * as Discord from 'discord.js';
 import { 
     Bot, 
     Module, 
-    MessageCollector, 
     MessageEmbed, 
     EmbedNavigator 
 } from '../bot';
@@ -127,11 +126,12 @@ async function postMediaList(
 
     const pageInfo = mediaListPageView.content.info;
     if (pageInfo.total > pageInfo.perPage) {
-        await new EmbedNavigator(response,
+        await new EmbedNavigator(
+            response,
             message.author,
             pageInfo,
             async (page) => {
-                return mediaListEmbed(
+                await response.edit(mediaListEmbed(
                     bot,
                     user,
                     await AniList.getMediaListPage(
@@ -141,7 +141,7 @@ async function postMediaList(
                         viewer
                     ),
                     filter
-                );
+                ));  
             }
         ).listen();
     }
