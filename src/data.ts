@@ -60,7 +60,9 @@ async function upsert(
 async function collection(
     collectionName: string, 
 ): Promise<Mongo.Collection> {
-    const client = await Mongo.MongoClient.connect(dbUrl);
+    const client = await Mongo.MongoClient.connect(dbUrl, {
+        useUnifiedTopology: true
+    });
     const db = client.db(dbName);
     return db.collection(collectionName);
 }
