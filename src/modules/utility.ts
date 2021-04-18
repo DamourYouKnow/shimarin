@@ -1,5 +1,6 @@
 import * as Discord from 'discord.js';
 import * as Data from '../data';
+import { name, bugs, homepage } from '../../package.json';
 import { Bot, Module, MessageCollector, MessageEmbed } from '../bot';
 import * as AniList from '../anilist';
 
@@ -36,6 +37,16 @@ export default class extends Module {
                     })
                 }, bot));
             }
+        });
+
+        this.addCommand({
+            name: 'info',
+            help: {
+                'shortDesc': 'Displays information about me.'
+            },
+            aliases: ['information']
+        }, async (message) => {
+            await message.channel.send(infoEmbed(bot));
         });
         
         this.addCommand({
@@ -196,6 +207,52 @@ function help(bot, commandName: string): Discord.MessageEmbedOptions {
         description: desc,
         fields: fields
     };
+}
+
+function infoEmbed(bot: Bot) {
+    const team = [
+        {name: `D'Amour#0001`, role: 'Programming'}
+    ];
+    
+    const inviteUrl = 'https://discordapp.com/oauth2/authorize'
+        + '?client_id=817606122697392188&scope=bot&permissions=2147870784';
+
+    return new MessageEmbed({
+        title: `About ${name}`,
+        description: `Hello, I'm ${name}, a Discord bot that integrates with `
+            + `the [AniList](https://anilist.co/) platform.\n\n`
+            + `You can use this [link](${inviteUrl}) to add me to your server.`,
+        url: homepage,
+        thumbnail: {
+            url: bot.client.user.avatarURL()
+        },
+        fields: [
+            {
+                name: 'Feedback and support',
+                value: `Want to report an issue or provide feedback? `
+                    + `Email support@damour.xyz, message D'Amour#0001, `
+                    + `or create an issue on [GitHub](${bugs.url}).`
+            },
+            {
+                name: 'Contributing and development updates',
+                value: `I am always looking for new people to help contribute `
+                    + `to this project. You can ask about what features need `
+                    + `support and follow development updates on our `
+                    + `[Discord server](https://discord.gg/aEkzE59).`
+            },
+            {
+                name: 'Development team',
+                value: team.map((member) => {
+                    return `• ${member.name}, ${member.role}`;
+                }).join('\n')
+            },
+            {
+                name: 'Server count',
+                value: `I am currently active in `
+                    + `${bot.client.guilds.cache.size} servers.`
+            },
+        ]
+    }, bot);
 }
 
 function toSingleLine(str: string): string {
