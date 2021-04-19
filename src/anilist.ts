@@ -53,10 +53,7 @@ export interface Media {
     status: MediaStatus,
     title: MediaTitle,
     description: string,
-    coverImage: {
-        medium: string
-        large: string
-    },
+    coverImage: Image,
     chapters: number | null,
     episodes: number | null,
     genres: string[],
@@ -84,30 +81,54 @@ export interface Notification {
 
 export interface Character {
     name: CharacterName,
-    image: {
-        large: string,
-        medium: string
-    }
+    image: Image
     description: string,
     gender: string,
-    dateOfBirth: {
-        year: number,
-        month: number,
-        day: number
-    },
+    dateOfBirth: FuzzyDate,
     age: string
     siteUrl: string,
     media: Media[]
 }
 
-export interface CharacterName {
+export interface Staff {
+    languageV2: string,
+    name: Name,
+    image: Image,
+    description: string,
+    primaryOccupations: string[]
+    gender: string
+    dateOfBirth: FuzzyDate,
+    dateOfDeath: FuzzyDate,
+    age: number,
+    yearsActive: number[],
+    homeTown: string,
+    siteUrl: string,
+    staffMedia: Media[],
+    characters: Character[]
+}
+
+export interface Name {
     first: string,
     middle: string,
     last: string,
     full: string,
     native: string,
     alternative: string[],
+}
+
+export interface CharacterName extends Name {
     alternativeSpoiler: string[]
+}
+
+export interface FuzzyDate {
+    year: number,
+    month: number,
+    day: number
+}
+
+export interface Image {
+    medium: string,
+    large: string
 }
 
 export interface Page<ContentType> {
@@ -402,6 +423,115 @@ export async function getMediaSearchPage(
     };
 }
 
+export async function getStaffSearchPage(
+    search: string,
+    page: number,
+    viewer?: Viewer
+): Promise<View<Page<Staff>>> {
+    /*
+    languageV2: string,
+    name: Name,
+    image: Image,
+    description: string,
+    primaryOccupations: string[]
+    gender: string
+    dateOfBirth: FuzzyDate,
+    dateOfDeath: FuzzyDate,
+    age: number,
+    yearsActive: number[],
+    homeTown: string,
+    siteUrl: string,
+    staffMedia: Media[],
+    characters: Character[]
+    */
+    const response = await api.query(
+        `query (
+            $search: String,
+            $page: Int,
+            $perPage: Int
+        ) {
+            Page (page: $page, perPage: $perPage) {
+                pageInfo {
+                    total
+                    currentPage
+                    lastPage
+                    hasNextPage
+                    perPage
+                }
+                staff (search: $search) {
+                    name {
+                        first
+                        middle
+                        last
+                        full
+                        native
+                        alternative
+                    }
+                    image {
+                        large
+                        medium
+                    }
+                    description
+                    primaryOccupations
+                    gender
+                    dateOfBirth {
+                        year
+                        month
+                        day
+                    }
+                    dateOfDeath {
+                        year
+                        month
+                        day
+                    }
+                    age
+                    yearsActive
+                    homeTown
+                    siteUrl
+                    staffMedia (sort: POPULARITY_DESC) {
+                        nodes {
+                            id
+                            title {
+                                english
+                                romaji
+                                native
+                            }
+                            siteUrl
+                        }
+                    }
+                    characters (sort: FAVOURITES) {
+                        nodes {
+                            name {
+                                full
+                            }
+                            siteUrl
+                        }
+                    }
+                }
+            }
+        }`,
+        {
+            search: search,
+            page: page,
+            perPage: 10
+        }
+    );
+    const results = response.data.Page?.staff;
+    const staffPage = {
+        content: {
+            items: results as Staff[],
+            info: response.data.Page.pageInfo as PageInfo
+        },
+        viewer: viewer
+    };
+    staffPage.content.items.forEach((staff: any) => {
+        staff.staffMedia = staff.staffMedia.nodes;
+        staff.characters = staff.characters.nodes;
+    });
+    return staffPage;
+}
+
+
 export async function getMediaListPage(
     userId: number,
     filter: MediaListFilter,
@@ -505,7 +635,6 @@ export async function getNotifiations(
             items: results as Notification[],
             info: response.data.Page.pageInfo as PageInfo
         },
-        
     };
 }
 

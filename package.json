@@ -1,6 +1,6 @@
 {
   "name": "shimarin",
-  "version": "0.5.3",
+  "version": "0.6.0",
   "description": "A Discord bot for interacting with AniList",
   "main": "main.ts",
   "scripts": {

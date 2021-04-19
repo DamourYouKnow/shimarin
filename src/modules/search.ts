@@ -115,8 +115,48 @@ export default class extends Module {
                 characterEmbed
             );
         });
+
+        this.addCommand({
+            name: 'staff',
+            help: {
+                shortDesc: 'Search for information about a staff member',
+                arguments: {
+                    'name': 'Staff member name'
+                },
+                examples: ['staff yamada naoko']
+            }
+        }, async (message) => {
+            await search<AniList.Staff>(
+                bot,
+                message,
+                async (search, page, viewer) => {
+                    return await AniList.getStaffSearchPage(
+                        search,
+                        page,
+                        viewer
+                    );
+                },
+                staffSearchEmbed,
+                staffEmbed
+            );
+        });
     }
 }
+
+const months = [
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December'
+];
 
 async function search<T>(
     bot: Bot,
@@ -270,20 +310,6 @@ function characterEmbed(
     characterView: AniList.View<AniList.Character>
 ) {
     const character = characterView.content;
-    const months = [
-        'January',
-        'February',
-        'March',
-        'April',
-        'May',
-        'June',
-        'July',
-        'August',
-        'September',
-        'October',
-        'November',
-        'December'
-    ];
     const dob = character.dateOfBirth;
     const dobStr = dob && dob.year && dob.month && dob.day ?
         `${months[dob.month - 1]} ${dob.day}, ${dob.year}` : '';
@@ -351,6 +377,114 @@ function characterSearchEmbed(
     return searchResultsEmbed(bot, characterSearchView, items);
 }
 
+function staffSearchEmbed(
+    bot: Bot,
+    staffSearchView: AniList.View<AniList.Page<AniList.Staff>>
+) {
+    const staffList = staffSearchView.content.items;
+    const items = staffList.map((staff) => {
+        return {
+            name: staff.name.full,
+            description: staff.primaryOccupations.length > 0 ?
+                staff.primaryOccupations[0] :
+                'Unknown occupation'
+        };
+    });
+    return searchResultsEmbed(bot, staffSearchView, items);
+}
+
+function staffEmbed(
+    bot: Bot,
+    staffView: AniList.View<AniList.Staff>
+) {
+    const staff = staffView.content;
+
+    const dateString = (date: AniList.FuzzyDate): string => {
+        return date && date.year && date.month && date.day ?
+            `${months[date.month - 1]} ${date.day}, ${date.year}` : '';
+    };
+
+    const dateOfBirth = dateString(staff.dateOfBirth);
+    const dateOfDeath = dateString(staff.dateOfDeath);
+
+    let yearsActive =  '';
+    if (staff.yearsActive[0]) {
+        yearsActive = String(staff.yearsActive[0]);
+        if (staff.yearsActive[1]) {
+            yearsActive = `${yearsActive} - ${staff.yearsActive[1]}`;
+        } else {
+            yearsActive = `${yearsActive} - Present`;
+        }
+    }
+
+    const fields = [];
+    if (dateOfBirth) {
+        fields.push({
+            name: 'Date of birth',
+            value: dateOfBirth,
+            inline: true
+        });   
+    }
+    if (dateOfDeath) {
+        fields.push({
+            name: 'Date of death',
+            value: dateOfDeath,
+            inline: true
+        }); 
+    }
+    if (yearsActive) {
+        fields.push({
+            name: 'Years active',
+            value: yearsActive,
+            inline: true
+        }); 
+    }
+    if (staff.primaryOccupations.length > 0) {
+        fields.push({
+            name: 'Occupation',
+            value: staff.primaryOccupations.slice(0, 5).join(', '),
+            inline: false
+        });
+    }
+    if (staff.age) {
+        fields.push({
+            name: 'Age',
+            value: staff.age,
+            inline: true,
+        });
+    }
+    if (staff.staffMedia.length > 0) {
+        const noDupes = removeDuplicates(staff.staffMedia, (media) => media.id);
+        fields.push({
+            name: 'Worked on',
+            value: noDupes.map((media) => {
+                const title = AniList.mediaDisplayTitle(media.title);
+                return `[${title}](${media.siteUrl})`;
+            }).slice(0, 5).join('\n'),
+            inline: false
+        });
+    }
+    if (staff.characters.length > 0) {
+        fields.push({
+            name: 'Voice provider of',
+            value: staff.characters.map((character) => {
+                return `[${character.name.full}](${character.siteUrl})`;
+            }).slice(0, 5).join('\n'),
+            inline: false
+        });
+    }
+
+    return new MessageEmbed({
+        title: staff.name.full,
+        url: staff.siteUrl,
+        thumbnail: {
+            url: staff.image.large,
+        },
+        description: cleanDescription(staff.description, staff.siteUrl),
+        fields: fields
+    }, bot);
+}
+
 function cleanDescription(text: string, sourceUrl: string): string {
     let description = decode(text)
         .replace(/(<br>)+/g, '\n\n')
@@ -369,3 +503,15 @@ function cleanDescription(text: string, sourceUrl: string): string {
     }
     return description;
 }
+
+function removeDuplicates<T>(array: T[], comparator: (item: T) => any): T[] {
+    const set = new Set<any>();
+    const result: T[] = [];
+    for (const item of array) {
+        if (!set.has(comparator(item))) {
+            result.push(item);
+            set.add(comparator(item));
+        }
+    }
+    return result;
+} 
