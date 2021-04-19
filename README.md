@@ -12,9 +12,15 @@ You can add me to your server [here](https://discordapp.com/oauth2/authorize?cli
 preferences.
 - Track updates related to anime you are currently watching.
 
-## Required permissions
-- Manage message: This permission is used to improve the user experience by 
-removing reactions when 
+## Default permissions
+- **Send messages, embed links, attach files**: These permissions are required 
+for posting content.
+- **Add reactions**: This permission is required for content navigation.
+- **Use slash commands**: This permission will be required for slash commands 
+in the future.
+- **Manage message**: This permission is used to improve the user experience by 
+removing reactions when they can no longer be interacted with. This permission 
+can be removed, but it may impact user experience.
 
 All of the features are documented through the `>help` command.
 
