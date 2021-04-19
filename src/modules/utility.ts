@@ -215,7 +215,7 @@ function infoEmbed(bot: Bot) {
     ];
     
     const inviteUrl = 'https://discordapp.com/oauth2/authorize'
-        + '?client_id=817606122697392188&scope=bot&permissions=2147870784';
+        + '?client_id=817606122697392188&scope=bot&permissions=2147543104';
 
     return new MessageEmbed({
         title: `About ${name}`,
