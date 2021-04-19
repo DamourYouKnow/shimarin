@@ -4,7 +4,8 @@ import * as yaml from 'js-yaml';
 import * as Discord from 'discord.js';
 import { version } from '../package.json';
 
-type Channel =  Discord.TextChannel | Discord.DMChannel | Discord.NewsChannel;
+export type Channel =  Discord.TextChannel | Discord.DMChannel
+    | Discord.NewsChannel;
 
 const config = yaml.load(
     fs.readFileSync(path.resolve(__dirname, '../config.yml'))
@@ -194,36 +195,41 @@ export class EmbedNavigator {
     }
 
     async listen(): Promise<void> {
-        const previousBtn = await this.message.react('⬅️');
-        const nextBtn = await this.message.react('➡️');
-        const filter: Discord.CollectorFilter = () => true;
-        this.collector = this.message.createReactionCollector(filter, {
-            dispose: true,
-            time: 1000 * 60 * 15
-        });
+        try {
+            const previousBtn = await this.message.react('⬅️');
+            const nextBtn = await this.message.react('➡️');
 
-        const navigatingUser = this.navigatingUser;
-        const handleReaction = (
-            reaction: Discord.MessageReaction,
-            user: Discord.User
-        ) => {
-            if (this.updating || user != navigatingUser) return;
-            if (reaction == nextBtn) this.next();
-            if (reaction == previousBtn) this.previous();
-        };
+            const filter: Discord.CollectorFilter = () => true;
+            this.collector = this.message.createReactionCollector(filter, {
+                dispose: true,
+                time: 1000 * 60 * 15
+            });
 
-        this.collector.on('collect', handleReaction);
-        this.collector.on('remove', handleReaction);
-        this.collector.on('end', async () => {
-            try {
-                await nextBtn.remove();
-                await previousBtn.remove();
-            } catch (err) {
-                console.error(err);
-            }
-        });
+            const navigatingUser = this.navigatingUser;
+            const handleReaction = (
+                reaction: Discord.MessageReaction,
+                user: Discord.User
+            ) => {
+                if (this.updating || user != navigatingUser) return;
+                if (reaction == nextBtn) this.next();
+                if (reaction == previousBtn) this.previous();
+            };
 
-        this.updating = false;
+            this.collector.on('collect', handleReaction);
+            this.collector.on('remove', handleReaction);
+            this.collector.on('end', async () => {
+                try {
+                    await nextBtn.remove();
+                    await previousBtn.remove();
+                } catch (err) {
+                    console.error(err);
+                }
+            });
+
+            this.updating = false;
+        } catch (err) {
+            console.error(err);
+        }
     }
 
     async next(): Promise<void> {

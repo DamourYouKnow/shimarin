@@ -3,6 +3,7 @@ import { decode } from 'html-entities';
 import {
     Bot,
     Module,
+    Channel,
     MessageCollector,
     MessageEmbed,
     EmbedNavigator 
@@ -34,7 +35,7 @@ export default class extends Module {
                         viewer
                     );
                 },
-                mediaSearchEmbed,
+                mediaSearchItem,
                 mediaEmbed
             );
         });
@@ -60,7 +61,7 @@ export default class extends Module {
                         viewer
                     );
                 },
-                mediaSearchEmbed,
+                mediaSearchItem,
                 mediaEmbed
             );
         });
@@ -86,7 +87,7 @@ export default class extends Module {
                         viewer
                     );
                 },
-                mediaSearchEmbed,
+                mediaSearchItem,
                 mediaEmbed
             );
         });
@@ -111,7 +112,19 @@ export default class extends Module {
                         viewer
                     );
                 },
-                characterSearchEmbed,
+                (character: AniList.Character, viewer?: AniList.Viewer) => {
+                    return {
+                        name: character.name.full,
+                        description: character.media.length > 0 ?
+                            AniList.mediaDisplayTitle(
+                                character.media[0].title,
+                                viewer
+                            ) :'Unknown source',
+                        isAdultContent: character.media.some((media) => {
+                            return media.isAdult;
+                        })
+                    };
+                },
                 characterEmbed
             );
         });
@@ -136,10 +149,18 @@ export default class extends Module {
                         viewer
                     );
                 },
-                staffSearchEmbed,
+                (staff: AniList.Staff) => {
+                    return {
+                        name: staff.name.full,
+                        description: staff.primaryOccupations.length > 0 ?
+                            staff.primaryOccupations[0] :
+                            'Unknown occupation',
+                        isAdultContent: false
+                    };
+                },
                 staffEmbed
             );
-        });
+        });  
     }
 }
 
@@ -158,18 +179,20 @@ const months = [
     'December'
 ];
 
+interface SearchResultItem {
+    name: string
+    description: string
+    isAdultContent: boolean
+}
+
 async function search<T>(
     bot: Bot,
     message: Discord.Message,
     getResults: (
         search: string, page: number, viewer: AniList.Viewer
     ) => Promise<AniList.View<AniList.Page<T>>>,
-    createResultsEmbed: (
-        bot: Bot, results: AniList.View<AniList.Page<T>>
-    ) => Discord.MessageEmbed,
-    createEmbed: (
-        bot: Bot, view: AniList.View<T>
-    ) => Discord.MessageEmbed,
+    createSearchItem: (item: T, viewer?: AniList.Viewer) => SearchResultItem,
+    createEmbed: (bot: Bot, view: AniList.View<T>) => Discord.MessageEmbed
 ) {
     const search = message.content.split(' ').slice(1).join(' ');
     if (!search) {
@@ -190,15 +213,26 @@ async function search<T>(
         return;
     }
     if (resultsView.content.items.length == 1) {
-        await message.channel.send(createEmbed(bot, {
-            content: resultsView.content.items[0],
-            viewer: viewer
-        }));
+        const item = createSearchItem(resultsView.content.items[0], viewer);
+        if (showContent(item, message.channel, viewer)) {
+            await message.channel.send(createEmbed(bot, {
+                content: resultsView.content.items[0],
+                viewer: viewer
+            }));
+        } else {
+            await bot.sendEmbed(
+                message.channel,
+                'Cannot show this content',
+                'Please connect your AniList account, ensure that you '
+                    + 'have enabled 18+ content in your user settings, and run '
+                    + 'this command in a NSFW channel to view this content.'
+            );
+        }
         return;
     }
 
     const response = await message.channel.send(
-        createResultsEmbed(bot, resultsView)
+        searchResultsEmbed(bot, message.channel, resultsView, createSearchItem)
     );
     const navigator = new EmbedNavigator(
         response,
@@ -206,13 +240,15 @@ async function search<T>(
         resultsView.content.info,
         async (page) => {
             resultsView = await getResults(search, page, viewer);
-            response.edit(createResultsEmbed(
+            response.edit(searchResultsEmbed(
                 bot,
-                resultsView
+                message.channel,
+                resultsView,
+                createSearchItem
             ));
         }
     );
-    await navigator.listen();
+    navigator.listen();
 
     const collector = new MessageCollector(message.channel, message.author);
     collector.onReply = (reply) => {
@@ -220,13 +256,48 @@ async function search<T>(
         const results = resultsView.content.items;
         let selected = Number(reply.content);
         selected = selected % resultsView.content.info.perPage;
+
         if (!isNaN(selected) && selected >= 1 && selected <= results.length) {
-            response.edit(createEmbed(bot, {
-                content: results[selected - 1],
-                viewer: viewer
-            }));
+            const item = createSearchItem(results[selected - 1], viewer);
+            if (showContent(item, message.channel, viewer)) {
+                response.edit(createEmbed(bot, {
+                    content: results[selected - 1],
+                    viewer: viewer
+                }));
+            }
         }
     };
+}
+
+function searchResultsEmbed<T>(
+    bot: Bot,
+    channel: Channel,
+    resultsView: AniList.View<AniList.Page<T>>,
+    createItem: (item: T, viewer?: AniList.Viewer) => SearchResultItem
+): MessageEmbed {
+    const pageInfo = resultsView.content.info;
+    const pageStr = `Page ${pageInfo.currentPage} / ${pageInfo.lastPage}`;
+    const descStr = 'Enter the number of the item you are looking for:';
+    const fields = resultsView.content.items.map((item, i) => {
+        const resultItem = createItem(item, resultsView.viewer);
+        const pageStartIndex = (pageInfo.currentPage - 1) * pageInfo.perPage;
+        const showItem = showContent(resultItem, channel, resultsView.viewer);
+        if (resultItem.isAdultContent) resultItem.name += ' (NSFW)';
+        return {
+            name: showItem ?
+                `${i + 1 + pageStartIndex}. ${resultItem.name}` :
+                `${i + 1 + pageStartIndex}. <Removed>`,
+            value: showItem ?
+                resultItem.description :
+                'Connect your AniList account, allow 18+ content, and run '
+                    + 'this search in a NSFW channel to view.',
+        };
+    });
+    return new MessageEmbed({
+        title: 'Search results',
+        description: `${pageStr}\n\n${descStr}`,
+        fields: fields
+    }, bot);
 }
 
 function mediaEmbed(
@@ -266,43 +337,16 @@ function mediaEmbed(
     }, bot);
 }
 
-function searchResultsEmbed<T>(
-    bot: Bot,
-    resultsView: AniList.View<AniList.Page<T>>,
-    items: {name: string, description: string}[]
-) {
-    const pageInfo = resultsView.content.info;
-    const pageStr = `Page ${pageInfo.currentPage} / ${pageInfo.lastPage}`;
-    const descStr = 'Enter the number of the item you are looking for:';
-    const fields = items.map((item, i) => {
-        const pageStartIndex = (pageInfo.currentPage - 1) * pageInfo.perPage;
-        return {
-            name: `${i + 1 + pageStartIndex}. ${item.name}`,
-            value: item.description
-        };
-    });
-    return new MessageEmbed({
-        title: 'Search results',
-        description: `${pageStr}\n\n${descStr}`,
-        fields: fields
-    }, bot);
-}
-
-function mediaSearchEmbed(
-    bot: Bot,
-    mediaSearchView: AniList.View<AniList.Page<AniList.Media>>
-): Discord.MessageEmbed {
-    const mediaList = mediaSearchView.content;
-    const viewer = mediaSearchView.viewer;
-    const items = mediaList.items.map((media) => {
-        let title = AniList.mediaDisplayTitle(media.title, viewer);
-        if (media.isAdult) title += ' (NSFW)';
-        return {
-            name:title,
-            description: AniList.mediaFormatLabels[media.format] || 'No format'
-        };
-    });
-    return searchResultsEmbed(bot, mediaSearchView, items);
+function mediaSearchItem(
+    media: AniList.Media,
+    viewer?: AniList.Viewer
+): SearchResultItem {
+    return {
+        name: AniList.mediaDisplayTitle(media.title, viewer),
+        description: AniList.mediaFormatLabels[media.format]
+            || 'No format',
+        isAdultContent: media.isAdult
+    };
 }
 
 function characterEmbed(
@@ -356,41 +400,6 @@ function characterEmbed(
         description: cleanDescription(character.description, character.siteUrl),
         fields: fields
     }, bot);
-}
-
-function characterSearchEmbed(
-    bot: Bot,
-    characterSearchView: AniList.View<AniList.Page<AniList.Character>>
-) {
-    const characters = characterSearchView.content.items;
-    const viewer = characterSearchView.viewer;
-    const items = characters.map((character) => {
-        let name = character.name.full;
-        if (character.media.some((media) => media.isAdult)) name += ' (NSFW)';
-        return {
-            name: name,
-            description: character.media.length > 0 ?
-                AniList.mediaDisplayTitle(character.media[0].title, viewer) :
-                'Unknown source'
-        };
-    });
-    return searchResultsEmbed(bot, characterSearchView, items);
-}
-
-function staffSearchEmbed(
-    bot: Bot,
-    staffSearchView: AniList.View<AniList.Page<AniList.Staff>>
-) {
-    const staffList = staffSearchView.content.items;
-    const items = staffList.map((staff) => {
-        return {
-            name: staff.name.full,
-            description: staff.primaryOccupations.length > 0 ?
-                staff.primaryOccupations[0] :
-                'Unknown occupation'
-        };
-    });
-    return searchResultsEmbed(bot, staffSearchView, items);
 }
 
 function staffEmbed(
@@ -483,6 +492,20 @@ function staffEmbed(
         description: cleanDescription(staff.description, staff.siteUrl),
         fields: fields
     }, bot);
+}
+
+function showContent(
+    item: SearchResultItem,
+    channel: Channel,
+    viewer?: AniList.Viewer
+): boolean {
+    if (!viewer) return !item.isAdultContent;
+    if (channel instanceof Discord.TextChannel) {
+        const textChannel = channel as Discord.TextChannel;
+        if (!textChannel.nsfw) return !item.isAdultContent;
+    }
+    return !item.isAdultContent
+        || (item.isAdultContent && viewer.options.displayAdultContent);
 }
 
 function cleanDescription(text: string, sourceUrl: string): string {

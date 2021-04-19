@@ -176,7 +176,7 @@ function mediaListEmbed(
         const resource = `${filter.type.toLowerCase()}/${entry.media.id}/`;
         const url = `https://anilist.co/${resource}`;
         const urlLabel = media.isAdult ? 
-            `[Link (NSFW)](${url})` : `[Link](${url})`;
+            `[Link - AniList Account required](${url})` : `[Link](${url})`;
         const maxCount = { 
             'ANIME': media.episodes, 'MANGA': media.chapters
         }[filter.type];
