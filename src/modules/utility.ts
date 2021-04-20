@@ -48,6 +48,45 @@ export default class extends Module {
         }, async (message) => {
             await message.channel.send(infoEmbed(bot));
         });
+
+        this.addCommand({
+            name: 'feedback',
+            help: {
+                shortDesc: 'Report feedback to the developers.',
+                longDesc: `This command can be used to report any issues 
+                    or to provide suggestions for new features.`,
+                examples: [`feedback good bot`]
+            },
+            aliases: ['report'],
+        }, async (message) => {
+            const author = message.author;
+            const feedback = message.content.split(' ').slice(1).join(' ');
+            const feedbackChannelId = bot.config['feedbackChannel'];
+            const feedbackChannel = bot.client.channels.cache
+                .get(feedbackChannelId) as Discord.TextChannel;
+
+            if (feedback.length == 0) {
+                await bot.sendError(
+                    message.channel,
+                    'No feedback message provided.'
+                );
+                return;
+            }
+            const limit = 1500;
+            if (feedback.length > limit) {
+                await bot.sendError(
+                    message.channel,
+                    `Feedback message must be less than ${limit} characters.`
+                );
+                return;
+            }
+
+            await bot.sendEmbed(
+                feedbackChannel,
+                `Feedback from ${author.username}#${author.discriminator}`,
+                feedback
+            );
+        });
         
         this.addCommand({
             name: 'connect',
@@ -230,8 +269,9 @@ function infoEmbed(bot: Bot) {
             {
                 name: 'Feedback and support',
                 value: `Want to report an issue or provide feedback? `
-                    + `Email support@damour.xyz, message D'Amour#0001, `
-                    + `or create an issue on [GitHub](${bugs.url}).`
+                    + `Use the feedback command, e-mail support@damour.xyz, `
+                    + `message D'Amour#0001, or create an issue on `
+                    + `[GitHub](${bugs.url}).`
             },
             {
                 name: 'Contributing and development updates',
