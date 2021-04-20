@@ -265,6 +265,7 @@ async function search<T>(
                     viewer: viewer
                 }));
             }
+            reply.delete().catch(console.error);
         }
     };
 }
