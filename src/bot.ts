@@ -196,14 +196,14 @@ export class EmbedNavigator {
 
     async listen(): Promise<void> {
         try {
-            const previousBtn = await this.message.react('⬅️');
-            const nextBtn = await this.message.react('➡️');
-
             const filter: Discord.CollectorFilter = () => true;
             this.collector = this.message.createReactionCollector(filter, {
                 dispose: true,
                 time: 1000 * 60 * 15
             });
+
+            const previousBtn = await this.message.react('⬅️');
+            const nextBtn = await this.message.react('➡️');
 
             const navigatingUser = this.navigatingUser;
             const handleReaction = (
@@ -251,7 +251,7 @@ export class EmbedNavigator {
     }
 
     stop() {
-        this.collector.stop();
+        if (this.collector) this.collector.stop();
     }
 }
 
