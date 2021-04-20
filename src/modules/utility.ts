@@ -86,6 +86,11 @@ export default class extends Module {
                 `Feedback from ${author.username}#${author.discriminator}`,
                 feedback
             );
+            await bot.sendEmbed(
+                message.channel,
+                'Feedback sent', 
+                'Your feedback has been reported to the developers.'
+            );
         });
         
         this.addCommand({
