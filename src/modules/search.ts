@@ -152,9 +152,7 @@ export default class extends Module {
                 (staff: AniList.Staff) => {
                     return {
                         name: staff.name.full,
-                        description: staff.primaryOccupations.length > 0 ?
-                            staff.primaryOccupations[0] :
-                            'Unknown occupation',
+                        description: getStaffOccupation(staff),
                         isAdultContent: false
                     };
                 },
@@ -505,6 +503,16 @@ function staffEmbed(
         description: cleanDescription(staff.description, staff.siteUrl),
         fields: fields
     }, bot);
+}
+
+function getStaffOccupation(staff: AniList.Staff): string {
+    if (staff.primaryOccupations.length > 0) {
+        return staff.primaryOccupations[0];
+    }
+    if (staff.characters.length > 0) {
+        return 'Voice provider';
+    }
+    return 'Unknown occupation';
 }
 
 function showContent(
