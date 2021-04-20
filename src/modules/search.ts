@@ -392,8 +392,14 @@ function characterEmbed(
         });
     }
 
+    let title = character.name.full;
+    const altNames = character.name.alternative;
+    if (altNames.length > 0 && altNames[0] !== '') {
+        title += ` (${altNames.slice(0, 3).join(', ')})`;
+    }
+
     return new MessageEmbed({
-        title: character.name.full,
+        title: title,
         url: character.siteUrl,
         thumbnail: {
             url: character.image.large,
@@ -484,8 +490,14 @@ function staffEmbed(
         });
     }
 
+    let title = staff.name.full;
+    const altNames = staff.name.alternative;
+    if (altNames.length > 0 && altNames[0] !== '') {
+        title += ` (${altNames.slice(0, 3).join(', ')})`;
+    }
+
     return new MessageEmbed({
-        title: staff.name.full,
+        title: title,
         url: staff.siteUrl,
         thumbnail: {
             url: staff.image.large,
