@@ -1,7 +1,7 @@
 {
     "compilerOptions": {
       "typeRoots" : ["./node_modules/@types", "./typings"],
-      "target": "ES6",
+      "target": "es2019",
       "moduleResolution": "Node",
       "resolveJsonModule": true
     }
