@@ -210,6 +210,11 @@ async function search<T>(
         );
         return;
     }
+
+    const cannotShowContentMsg = 'Please connect your AniList account, ensure '
+        + 'that you have enabled 18+ content in your AniList profile settings, '
+        + 'and run this command in a NSFW channel to view this content.';
+
     if (resultsView.content.items.length == 1) {
         const item = createSearchItem(resultsView.content.items[0], viewer);
         if (showContent(item, message.channel, viewer)) {
@@ -221,9 +226,7 @@ async function search<T>(
             await bot.sendEmbed(
                 message.channel,
                 'Cannot show this content',
-                'Please connect your AniList account, ensure that you '
-                    + 'have enabled 18+ content in your user settings, and run '
-                    + 'this command in a NSFW channel to view this content.'
+                cannotShowContentMsg
             );
         }
         return;
@@ -262,6 +265,14 @@ async function search<T>(
                     content: results[selected - 1],
                     viewer: viewer
                 }));
+            } else {
+                const embed = response.embeds[0];
+                if (embed) {
+                    embed.setTitle('Cannot show this content');
+                    embed.setDescription(cannotShowContentMsg);
+                    embed.fields = [];
+                }
+                response.edit(embed).catch(console.error);
             }
             reply.delete().catch(console.error);
         }
@@ -288,8 +299,7 @@ function searchResultsEmbed<T>(
                 `${i + 1 + pageStartIndex}. <Removed>`,
             value: showItem ?
                 resultItem.description :
-                'Connect your AniList account, allow 18+ content, and run '
-                    + 'this search in a NSFW channel to view.',
+                'Contains adult content',
         };
     });
     return new MessageEmbed({
