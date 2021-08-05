@@ -346,7 +346,7 @@ function mediaEmbed(
 ): Discord.MessageEmbed {
     const media = mediaView.content;
     return new MessageEmbed({
-        title: AniList.mediaDisplayTitle(media.title),
+        title: AniList.mediaDisplayTitle(media.title, mediaView.viewer),
         url: media.siteUrl,
         thumbnail: {
             url: media.coverImage.large,
@@ -424,7 +424,10 @@ function characterEmbed(
         fields.push({
             name: 'Appears in',
             value: character.media.map((media) => {
-                const title = AniList.mediaDisplayTitle(media.title);
+                const title = AniList.mediaDisplayTitle(
+                    media.title,
+                    characterView.viewer
+                );
                 return `[${title}](${media.siteUrl})`;
             }).slice(0, 5).join('\n'),
             inline: false
@@ -513,7 +516,10 @@ function staffEmbed(
         fields.push({
             name: 'Worked on',
             value: noDupes.map((media) => {
-                const title = AniList.mediaDisplayTitle(media.title);
+                const title = AniList.mediaDisplayTitle(
+                    media.title,
+                    staffView.viewer
+                );
                 return `[${title}](${media.siteUrl})`;
             }).slice(0, 5).join('\n'),
             inline: false
