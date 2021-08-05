@@ -158,7 +158,38 @@ export default class extends Module {
                 },
                 staffEmbed
             );
-        });  
+        });
+        
+        this.addCommand({
+            name: 'profile',
+            help: {
+                shortDesc: 'Search for an AniList profile',
+                arguments: {
+                    'name': 'AniList username'
+                },
+                examples: ['profile damouryouknow']
+            }
+        }, async (message) => {
+            await search<AniList.User>(
+                bot,
+                message,
+                async (search, page, viewer) => {
+                    return await AniList.getUserSearchPage(
+                        search,
+                        page,
+                        viewer
+                    );
+                },
+                (user: AniList.User) => {
+                    return {
+                        name: user.name,
+                        description: 'User',
+                        isAdultContent: false
+                    };
+                },
+                userEmbed
+            );
+        });
     }
 }
 
@@ -511,6 +542,73 @@ function staffEmbed(
             url: staff.image.large,
         },
         description: cleanDescription(staff.description, staff.siteUrl),
+        fields: fields
+    }, bot);
+}
+
+function userEmbed(
+    bot: Bot,
+    userView: AniList.View<AniList.User>
+) {
+    const user = userView.content;
+    const viewer = userView.viewer;
+    const fields = [];
+    const watchtimeHours = user.statistics.anime.minutesWatched / 60
+    fields.push({
+        name: 'Anime watchtime',
+        value: `${watchtimeHours.toFixed(1)} hours`,
+        inline: false 
+    });
+    const favourites = {
+        anime: user.favourites.anime[0],
+        manga: user.favourites.manga[0],
+        character: user.favourites.characters[0],
+        staff: user.favourites.staff[0],
+    }
+    if (favourites.anime) {
+        const title = AniList.mediaDisplayTitle(favourites.anime.title, viewer);
+        const titleField = `[${title}](${favourites.anime.siteUrl})`;
+        fields.push({
+            name: 'Favorite anime',
+            value: titleField,
+            inline: false
+        });
+    }
+    if (favourites.manga) {
+        const title = AniList.mediaDisplayTitle(favourites.manga.title, viewer);
+        const titleField = `[${title}](${favourites.manga.siteUrl})`;
+        fields.push({
+            name: 'Favorite manga',
+            value: titleField,
+            inline: false
+        });
+    }
+    if (favourites.character) {
+        const name = `[${favourites.character.name.full}]`
+            + `(${favourites.character.siteUrl})`
+        fields.push({
+            name: 'Favourite anime',
+            value: name,
+            inline: false
+        });
+    }
+    if (favourites.staff) {
+        const name = `[${favourites.staff.name.full}]` 
+            + `(${favourites.staff.siteUrl})`;
+        fields.push({
+            name: 'Favourite staff member',
+            value: name,
+            inline: false
+        });
+    }
+
+    return new MessageEmbed({
+        title: user.name,
+        url: user.siteUrl,
+        thumbnail: {
+            url: user.avatar.medium,
+        },
+        description: cleanDescription(user.about, user.siteUrl),
         fields: fields
     }, bot);
 }

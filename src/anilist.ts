@@ -14,6 +14,18 @@ export interface User {
     avatar: {
         medium: string
     }
+    about: string,
+    siteUrl: string,
+    statistics: {
+        anime: UserStatistics
+    },
+    favourites: {
+        anime: Media[],
+        manga: Media[],
+        characters: Character[],
+        staff: Staff[],
+        // TODO: Add favourite Studio.
+    }
 }
 
 export interface Viewer extends User {
@@ -105,6 +117,9 @@ export interface Staff {
     siteUrl: string,
     staffMedia: Media[],
     characters: Character[]
+}
+export interface UserStatistics {
+    minutesWatched: number
 }
 
 export interface Name {
@@ -584,6 +599,105 @@ export async function getMediaListPage(
         },
         viewer: viewer
     };
+}
+
+export async function getUserSearchPage(
+    search: string,
+    page: number,
+    viewer?: Viewer
+): Promise<View<Page<User>> | null> {
+    const response = await api.query(
+        `query (
+            $search: String,
+            $page: Int,
+            $perPage: Int
+        ) {
+            Page (page: $page, perPage: $perPage) {
+                pageInfo {
+                    total
+                    currentPage
+                    lastPage
+                    hasNextPage
+                    perPage
+                }
+                users (search: $search) {
+                    name
+                    options {
+                        profileColor
+                    }
+                    avatar {
+                        medium
+                    }
+                    about(asHtml: false)
+                    siteUrl
+                    statistics {
+                        anime {
+                            minutesWatched
+                        }
+                    }
+                    favourites {
+                        anime(page: 0, perPage: 1) {
+                            nodes {
+                                title {
+                                    english
+                                    romaji
+                                    native
+                                }
+                                siteUrl
+                            }
+                        }
+                        manga(page: 0, perPage: 1) {
+                            nodes {
+                                title {
+                                    english
+                                    romaji
+                                    native
+                                }
+                                siteUrl
+                                }
+                            }
+                        characters(page: 0, perPage: 1) {
+                            nodes{
+                                name {
+                                    full
+                                }
+                                siteUrl
+                            }
+                        }
+                        staff(page: 0, perPage: 1) {
+                            nodes {
+                                name {
+                                    full
+                                }
+                                siteUrl
+                            } 
+                        }
+                    }
+                }
+            }
+        }`,
+        {
+            search: search,
+            page: page,
+            perPage: 10
+        }
+    );
+    const results = response.data.Page?.users;
+    const usersPage = {
+        content: {
+            items: results as User[],
+            info: response.data.Page.pageInfo as PageInfo
+        },
+        viewer: viewer
+    };
+
+    usersPage.content.items.forEach((user: any) => {
+        user.favourites.anime = user.favourites.anime.nodes;
+        user.favourites.manga = user.favourites.manga.nodes;
+        user.favourites.characters = user.favourites.characters.nodes;
+        user.favourites.staff = user.favourites.staff.nodes;
+    });
+    return usersPage;
 }
 
 export async function getNotifiations(
