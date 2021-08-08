@@ -566,44 +566,46 @@ function userEmbed(
         inline: false 
     });
     const favourites = {
-        anime: user.favourites.anime[0],
-        manga: user.favourites.manga[0],
-        character: user.favourites.characters[0],
-        staff: user.favourites.staff[0],
-    }
-    if (favourites.anime) {
-        const title = AniList.mediaDisplayTitle(favourites.anime.title, viewer);
-        const titleField = `[${title}](${favourites.anime.siteUrl})`;
+        anime: user.favourites.anime.map((anime) => {
+            const title = AniList.mediaDisplayTitle(anime.title, viewer); 
+            return `[${title}](${anime.siteUrl})`;
+        }),
+        manga: user.favourites.manga.map((manga) => {
+            const title = AniList.mediaDisplayTitle(manga.title, viewer); 
+            return `[${title}](${manga.siteUrl})`;
+        }),
+        character: user.favourites.characters.map((character) => {
+            return `[${character.name.full}](${character.siteUrl})`;
+        }),
+        staff: user.favourites.staff.map((staff) => {
+            return `[${staff.name.full}](${staff.siteUrl})`
+        })
+    };
+    if (favourites.anime.length > 0) {
         fields.push({
             name: 'Favorite anime',
-            value: titleField,
+            value: favourites.anime.join('\n'),
             inline: false
         });
     }
-    if (favourites.manga) {
-        const title = AniList.mediaDisplayTitle(favourites.manga.title, viewer);
-        const titleField = `[${title}](${favourites.manga.siteUrl})`;
+    if (favourites.manga.length > 0) {
         fields.push({
             name: 'Favorite manga',
-            value: titleField,
+            value: favourites.manga.join('\n'),
             inline: false
         });
     }
-    if (favourites.character) {
-        const name = `[${favourites.character.name.full}]`
-            + `(${favourites.character.siteUrl})`
+    if (favourites.character.length > 0) {
         fields.push({
-            name: 'Favourite anime',
-            value: name,
+            name: 'Favourite characters',
+            value: favourites.character.join('\n'),
             inline: false
         });
     }
-    if (favourites.staff) {
-        const name = `[${favourites.staff.name.full}]` 
-            + `(${favourites.staff.siteUrl})`;
+    if (favourites.staff.length > 0) {
         fields.push({
-            name: 'Favourite staff member',
-            value: name,
+            name: 'Favourite staff members',
+            value: favourites.staff.join('\n'),
             inline: false
         });
     }

@@ -636,7 +636,7 @@ export async function getUserSearchPage(
                         }
                     }
                     favourites {
-                        anime(page: 0, perPage: 1) {
+                        anime(page: 0, perPage: 5) {
                             nodes {
                                 title {
                                     english
@@ -646,7 +646,7 @@ export async function getUserSearchPage(
                                 siteUrl
                             }
                         }
-                        manga(page: 0, perPage: 1) {
+                        manga(page: 0, perPage: 5) {
                             nodes {
                                 title {
                                     english
@@ -656,7 +656,7 @@ export async function getUserSearchPage(
                                 siteUrl
                                 }
                             }
-                        characters(page: 0, perPage: 1) {
+                        characters(page: 0, perPage: 5) {
                             nodes{
                                 name {
                                     full
@@ -664,7 +664,7 @@ export async function getUserSearchPage(
                                 siteUrl
                             }
                         }
-                        staff(page: 0, perPage: 1) {
+                        staff(page: 0, perPage: 5) {
                             nodes {
                                 name {
                                     full
