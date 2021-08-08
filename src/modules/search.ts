@@ -433,6 +433,17 @@ function characterEmbed(
             inline: false
         });
     }
+    if (character.voiceActors.length > 0) {
+        let voiceProvider = character.voiceActors[0];
+        if (voiceProvider[0]) {
+            voiceProvider = voiceProvider[0];
+        }
+        fields.push({
+            name: 'Voice provider',
+            value: `[${voiceProvider.name.full}](${voiceProvider.siteUrl})`,
+            inline: true,
+        });
+    }
 
     let title = character.name.full;
     const altNames = character.name.alternative;

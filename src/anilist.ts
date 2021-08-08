@@ -99,7 +99,8 @@ export interface Character {
     dateOfBirth: FuzzyDate,
     age: string
     siteUrl: string,
-    media: Media[]
+    media: Media[],
+    voiceActors: Staff[]
 }
 
 export interface Staff {
@@ -366,8 +367,19 @@ export async function getCharacterSearchPage(
                     age
                     siteUrl
                     media (sort: POPULARITY_DESC) {
-                        nodes {
-                            ${mediaFields}
+                        edges {
+                            node {
+                                ${mediaFields}
+                            }
+                            voiceActors(
+                                language: JAPANESE,
+                                sort: FAVOURITES_DESC
+                            ) {
+                                name {
+                                    full
+                                }
+                                siteUrl
+                            }
                         }
                     }
                 }
@@ -388,7 +400,10 @@ export async function getCharacterSearchPage(
         viewer: viewer
     };
     charactersPage.content.items.forEach((character: any) => {
-        character.media = character.media.nodes;
+        character.voiceActors = character.media.edges.map((edge) => {
+            return edge.voiceActors;
+        });
+        character.media = character.media.edges.map((edge) => edge.node);
     });
     return charactersPage;
 }
